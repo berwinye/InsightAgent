@@ -12,11 +12,12 @@ from app.services.agent_service import analyze_question
 from app.services.saved_queries_service import create_saved_query
 from app.schemas.skills import AnalyzeRequest, AnalyzeResponse
 from app.schemas.saved_queries import SavedQueryCreate
+from app.core.security import verify_api_key
 from app.db.rw_session import get_rw_db
 from app.models.analysis_logs import AnalysisLog
 from app.models.agent_turn import AgentTurn
 
-router = APIRouter(prefix="/analytics", tags=["Analytics"])
+router = APIRouter(prefix="/analytics", tags=["Analytics"], dependencies=[Depends(verify_api_key)])
 
 
 @router.get(

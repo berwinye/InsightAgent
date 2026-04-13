@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.security import verify_api_key
 from app.db.rw_session import get_rw_db
 from app.schemas.saved_queries import (
     SavedQueryCreate,
@@ -16,7 +17,7 @@ from app.services.saved_queries_service import (
     update_saved_query,
 )
 
-router = APIRouter(prefix="/saved-queries", tags=["Saved Queries"])
+router = APIRouter(prefix="/saved-queries", tags=["Saved Queries"], dependencies=[Depends(verify_api_key)])
 
 
 @router.post(

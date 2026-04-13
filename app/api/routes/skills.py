@@ -1,11 +1,13 @@
 from typing import Any, Union
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
+
+from app.core.security import verify_api_key
 
 from app.schemas.skills import RunPythonRequest, RunPythonSuccess, RunPythonError
 from app.services.skills.observe_schema import observe_schema
 from app.services.skills.run_python_analysis import run_python_analysis
 
-router = APIRouter(prefix="/skills", tags=["Skills"])
+router = APIRouter(prefix="/skills", tags=["Skills"], dependencies=[Depends(verify_api_key)])
 
 
 @router.post(

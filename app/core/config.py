@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     MYSQL_APP_RO_USER: str = "app_ro"
     MYSQL_APP_RO_PASSWORD: str = ""
 
+    API_KEY: str = ""
+
     QWEN_API_KEY: str = ""
     QWEN_MODEL: str = "qwen-plus"
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"

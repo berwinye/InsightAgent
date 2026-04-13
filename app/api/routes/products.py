@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.security import verify_api_key
 from app.db.ro_session import get_ro_db
 from app.schemas.products import ProductBase, ProductList
 from app.services.products_service import get_product, list_products
 
-router = APIRouter(prefix="/products", tags=["Products"])
+router = APIRouter(prefix="/products", tags=["Products"], dependencies=[Depends(verify_api_key)])
 
 
 @router.get("", response_model=ProductList, summary="List all products")
