@@ -167,12 +167,18 @@ def test_full_trace_five_step_question(client: TestClient):
     Validates the exact multi-step pattern:
       observe_schema → run × N → final_answer
 
-    Question deliberately requires broad-to-narrow investigation.
+    Uses a genuinely result-dependent three-stage question so the LLM cannot
+    collapse all steps into a single SQL query:
+      Stage 1 – find the exact year-month with highest total sales (specific value needed)
+      Stage 2 – using that year-month, rank sales reps by revenue in that period
+      Stage 3 – using the top rep's employeeNumber, inspect their customers' credit limits
     """
     result = _analyze(
         client,
-        "请逐步分析：① 哪个月份的平均订单金额最高？② 那个月里哪10个产品卖得最好？"
-        "③ 这10个产品平均毛利率是多少（以MSRP衡量）？",
+        "请严格分三步执行，每步单独运行代码："
+        "第一步，找出历史上单月总销售额最高的具体年份和月份（输出year和month的具体数值）；"
+        "第二步，用第一步得到的具体年份和月份，查询那个月每位销售代表的销售总额排名；"
+        "第三步，取第二步排名第一的销售代表的employeeNumber，查询他负责的所有客户及其creditLimit。",
     )
     trace = result["tool_trace"]
 
@@ -181,7 +187,7 @@ def test_full_trace_five_step_question(client: TestClient):
 
     code_runs = trace.count("run_python_analysis")
     assert code_runs >= 2, (
-        f"Three-part question needs ≥ 2 code runs, got {code_runs}. Trace: {trace}"
+        f"Three-stage result-dependent question needs ≥ 2 code runs, got {code_runs}. Trace: {trace}"
     )
 
     print(f"\n  Tool trace ({len(trace)} calls): {' → '.join(trace)}")
