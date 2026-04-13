@@ -22,28 +22,28 @@
 
 ## Endpoint Overview
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/` | Basic health check | No |
-| GET | `/health` | Detailed health check with DB connectivity | No |
-| GET | `/employees` | List all employees (paginated) | Yes |
-| GET | `/employees/{employee_id}` | Get one employee by ID | Yes |
-| GET | `/products` | List all products (paginated) | Yes |
-| GET | `/products/{product_code}` | Get one product by code | Yes |
-| POST | `/saved-queries` | Create a new saved query | Yes |
-| GET | `/saved-queries` | List all saved queries (paginated) | Yes |
-| GET | `/saved-queries/{query_id}` | Get one saved query by ID | Yes |
-| PUT | `/saved-queries/{query_id}` | Partially update a saved query | Yes |
-| DELETE | `/saved-queries/{query_id}` | Delete a saved query | Yes |
-| GET | `/analytics/store-sales-summary` | Total revenue and order count by office | Yes |
-| GET | `/analytics/product-ranking` | Products ranked by revenue | Yes |
-| GET | `/analytics/employee-performance` | Sales KPIs per employee | Yes |
-| GET | `/analytics/sales-trend` | Monthly revenue trend (optional year filter) | Yes |
-| POST | `/analytics/analyze` | Natural language analysis via Qwen agent | Yes |
-| GET | `/analytics/logs` | List past analysis run logs | Yes |
-| GET | `/analytics/logs/{log_id}/turns` | Get per-turn LLM details for an analysis run | Yes |
-| POST | `/skills/observe_schema` | Return full database schema | Yes |
-| POST | `/skills/run_python_analysis` | Execute sandboxed Python analysis code | Yes |
+| Method | Endpoint                          | Description                                  | Auth Required |
+| ------ | --------------------------------- | -------------------------------------------- | ------------- |
+| GET    | `/`                               | Basic health check                           | No            |
+| GET    | `/health`                         | Detailed health check with DB connectivity   | No            |
+| GET    | `/employees`                      | List all employees (paginated)               | Yes           |
+| GET    | `/employees/{employee_id}`        | Get one employee by ID                       | Yes           |
+| GET    | `/products`                       | List all products (paginated)                | Yes           |
+| GET    | `/products/{product_code}`        | Get one product by code                      | Yes           |
+| POST   | `/saved-queries`                  | Create a new saved query                     | Yes           |
+| GET    | `/saved-queries`                  | List all saved queries (paginated)           | Yes           |
+| GET    | `/saved-queries/{query_id}`       | Get one saved query by ID                    | Yes           |
+| PUT    | `/saved-queries/{query_id}`       | Partially update a saved query               | Yes           |
+| DELETE | `/saved-queries/{query_id}`       | Delete a saved query                         | Yes           |
+| GET    | `/analytics/store-sales-summary`  | Total revenue and order count by office      | Yes           |
+| GET    | `/analytics/product-ranking`      | Products ranked by revenue                   | Yes           |
+| GET    | `/analytics/employee-performance` | Sales KPIs per employee                      | Yes           |
+| GET    | `/analytics/sales-trend`          | Monthly revenue trend (optional year filter) | Yes           |
+| POST   | `/analytics/analyze`              | Natural language analysis via Qwen agent     | Yes           |
+| GET    | `/analytics/logs`                 | List past analysis run logs                  | Yes           |
+| GET    | `/analytics/logs/{log_id}/turns`  | Get per-turn LLM details for an analysis run | Yes           |
+| POST   | `/skills/observe_schema`          | Return full database schema                  | Yes           |
+| POST   | `/skills/run_python_analysis`     | Execute sandboxed Python analysis code       | Yes           |
 
 ---
 
@@ -51,8 +51,8 @@
 
 All business endpoints require an **API key** passed as an HTTP header.
 
-| Header | Value |
-|--------|-------|
+| Header      | Value                                          |
+| ----------- | ---------------------------------------------- |
 | `X-API-Key` | Your configured API key (see `.env → API_KEY`) |
 
 **Default key (development):** `insightagent-secret-key`
@@ -66,11 +66,11 @@ curl http://localhost:8000/employees \
 
 ### Authentication Behaviour
 
-| Scenario | HTTP Status | Response |
-|----------|------------|---------|
-| Valid key | `2xx` | Normal response |
-| Missing or wrong key | `401` | `{"error": "invalid_api_key", "message": "Invalid or missing X-API-Key header."}` |
-| `API_KEY` env var not set | Any | Auth skipped (open access — development mode only) |
+| Scenario                  | HTTP Status | Response                                                                          |
+| ------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| Valid key                 | `2xx`       | Normal response                                                                   |
+| Missing or wrong key      | `401`       | `{"error": "invalid_api_key", "message": "Invalid or missing X-API-Key header."}` |
+| `API_KEY` env var not set | Any         | Auth skipped (open access — development mode only)                                |
 
 > **Note:** The two health check endpoints (`GET /` and `GET /health`) do **not** require authentication.
 
@@ -82,16 +82,16 @@ All error responses are JSON objects. Standard HTTP status codes are used throug
 
 ### HTTP Status Codes
 
-| Code | Meaning | Typical Cause |
-|------|---------|---------------|
-| `200` | OK | Request succeeded |
-| `201` | Created | Resource created (POST to `/saved-queries`) |
-| `204` | No Content | Resource deleted successfully |
-| `400` | Bad Request | Malformed request body or invalid parameter |
-| `401` | Unauthorized | Missing or invalid `X-API-Key` header |
-| `404` | Not Found | Requested resource does not exist |
-| `422` | Unprocessable Entity | Request body, path parameter, or query parameter fails validation |
-| `500` | Internal Server Error | Unexpected server-side error |
+| Code  | Meaning               | Typical Cause                                                     |
+| ----- | --------------------- | ----------------------------------------------------------------- |
+| `200` | OK                    | Request succeeded                                                 |
+| `201` | Created               | Resource created (POST to `/saved-queries`)                       |
+| `204` | No Content            | Resource deleted successfully                                     |
+| `400` | Bad Request           | Malformed request body or invalid parameter                       |
+| `401` | Unauthorized          | Missing or invalid `X-API-Key` header                             |
+| `404` | Not Found             | Requested resource does not exist                                 |
+| `422` | Unprocessable Entity  | Request body, path parameter, or query parameter fails validation |
+| `500` | Internal Server Error | Unexpected server-side error                                      |
 
 ### Structured Error Response (401 / 404 / 500)
 
@@ -109,6 +109,7 @@ All error responses are JSON objects. Standard HTTP status codes are used throug
 FastAPI returns a structured list of all validation failures. Examples:
 
 **Invalid path parameter type** (e.g. `GET /employees/not-a-number`):
+
 ```json
 {
   "detail": [
@@ -123,6 +124,7 @@ FastAPI returns a structured list of all validation failures. Examples:
 ```
 
 **Query parameter out of range** (e.g. `GET /products?limit=0`):
+
 ```json
 {
   "detail": [
@@ -137,6 +139,7 @@ FastAPI returns a structured list of all validation failures. Examples:
 ```
 
 **Missing required body field** (e.g. `POST /saved-queries` without `title`):
+
 ```json
 {
   "detail": [
@@ -152,16 +155,17 @@ FastAPI returns a structured list of all validation failures. Examples:
 
 ### Skill-Specific Error Statuses
 
-The `/skills/run_python_analysis` endpoint always returns HTTP `200` but embeds a `status` field:
+`/skills/run_python_analysis` returns HTTP `200` only on success. All error cases use standard HTTP status codes, with the error detail in `{"detail": {...}}`:
 
-| `status` | `error_type` | Meaning |
-|----------|-------------|---------|
-| `success` | — | Code executed successfully |
-| `blocked` | `SECURITY_VIOLATION` | AST guard rejected a forbidden import or call |
-| `blocked` | `SYNTAX_ERROR` | Python syntax error detected before execution |
-| `failed` | `RUNTIME_ERROR` | Code raised an exception during execution |
-| `failed` | `EXECUTION_TIMEOUT` | Code exceeded the 30-second timeout |
-| `failed` | `SQL_BLOCKED` | SQL contained a non-SELECT statement |
+| HTTP | `error_type`         | `status`  | Meaning                                       |
+| ---- | -------------------- | --------- | --------------------------------------------- |
+| `200` | —                   | `success` | Code executed successfully                    |
+| `403` | `SECURITY_VIOLATION` | `blocked` | AST guard rejected a forbidden import or call |
+| `403` | `SQL_BLOCKED`        | `failed`  | SQL contained a non-SELECT statement          |
+| `408` | `EXECUTION_TIMEOUT`  | `failed`  | Code exceeded the 30-second timeout           |
+| `422` | `SYNTAX_ERROR`       | `blocked` | Python syntax error detected before execution |
+| `422` | `RUNTIME_ERROR`      | `failed`  | Code raised an exception during execution     |
+| `500` | `WORKER_ERROR`       | `failed`  | Internal subprocess worker error              |
 
 ---
 
@@ -229,10 +233,10 @@ List all employees with pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Constraints | Description |
-|-----------|------|---------|-------------|-------------|
-| `skip` | integer | `0` | `≥ 0` | Number of records to skip |
-| `limit` | integer | `100` | `1 – 500` | Maximum records to return |
+| Parameter | Type    | Default | Constraints | Description               |
+| --------- | ------- | ------- | ----------- | ------------------------- |
+| `skip`    | integer | `0`     | `≥ 0`       | Number of records to skip |
+| `limit`   | integer | `100`   | `1 – 500`   | Maximum records to return |
 
 **Example Request:**
 
@@ -271,8 +275,8 @@ Get a single employee by their numeric ID.
 
 **Path Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter     | Type    | Description                          |
+| ------------- | ------- | ------------------------------------ |
 | `employee_id` | integer | The `employeeNumber` of the employee |
 
 **Example Request:**
@@ -321,10 +325,10 @@ List all products with pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Constraints | Description |
-|-----------|------|---------|-------------|-------------|
-| `skip` | integer | `0` | `≥ 0` | Number of records to skip |
-| `limit` | integer | `100` | `1 – 500` | Maximum records to return |
+| Parameter | Type    | Default | Constraints | Description               |
+| --------- | ------- | ------- | ----------- | ------------------------- |
+| `skip`    | integer | `0`     | `≥ 0`       | Number of records to skip |
+| `limit`   | integer | `100`   | `1 – 500`   | Maximum records to return |
 
 **Example Request:**
 
@@ -364,8 +368,8 @@ Get a single product by its code.
 
 **Path Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter      | Type   | Description                        |
+| -------------- | ------ | ---------------------------------- |
 | `product_code` | string | The `productCode`, e.g. `S10_1678` |
 
 **Example Request:**
@@ -415,12 +419,12 @@ Create a new saved query.
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | ✅ | Short descriptive title |
-| `natural_language_query` | string | ✅ | The original question in plain language |
-| `generated_code` | string | ❌ | Python analysis code (if any) |
-| `result_summary` | string | ❌ | Plain-text summary of the result |
+| Field                    | Type   | Required | Description                             |
+| ------------------------ | ------ | -------- | --------------------------------------- |
+| `title`                  | string | ✅        | Short descriptive title                 |
+| `natural_language_query` | string | ✅        | The original question in plain language |
+| `generated_code`         | string | ❌        | Python analysis code (if any)           |
+| `result_summary`         | string | ❌        | Plain-text summary of the result        |
 
 **Example Request:**
 
@@ -460,10 +464,10 @@ List all saved queries with pagination.
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Constraints | Description |
-|-----------|------|---------|-------------|-------------|
-| `skip` | integer | `0` | `≥ 0` | Number of records to skip |
-| `limit` | integer | `100` | `1 – 500` | Maximum records to return |
+| Parameter | Type    | Default | Constraints | Description               |
+| --------- | ------- | ------- | ----------- | ------------------------- |
+| `skip`    | integer | `0`     | `≥ 0`       | Number of records to skip |
+| `limit`   | integer | `100`   | `1 – 500`   | Maximum records to return |
 
 **Example Request:**
 
@@ -501,8 +505,8 @@ Get a single saved query by ID.
 
 **Path Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter  | Type    | Description        |
+| ---------- | ------- | ------------------ |
 | `query_id` | integer | The saved query ID |
 
 **Example Request:**
@@ -532,18 +536,18 @@ Update one or more fields of a saved query. All fields are optional (partial upd
 
 **Path Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter  | Type    | Description        |
+| ---------- | ------- | ------------------ |
 | `query_id` | integer | The saved query ID |
 
 **Request Body (all optional):**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | string | New title |
+| Field                    | Type   | Description       |
+| ------------------------ | ------ | ----------------- |
+| `title`                  | string | New title         |
 | `natural_language_query` | string | New question text |
-| `generated_code` | string | New code |
-| `result_summary` | string | New summary |
+| `generated_code`         | string | New code          |
+| `result_summary`         | string | New summary       |
 
 **Example Request:**
 
@@ -574,8 +578,8 @@ Delete a saved query by ID.
 
 **Path Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter  | Type    | Description        |
+| ---------- | ------- | ------------------ |
 | `query_id` | integer | The saved query ID |
 
 **Example Request:**
@@ -641,9 +645,9 @@ Products ranked by total revenue, descending.
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Constraints | Description |
-|-----------|------|---------|-------------|-------------|
-| `limit` | integer | `20` | `1 – 100` | Number of top products to return |
+| Parameter | Type    | Default | Constraints | Description                      |
+| --------- | ------- | ------- | ----------- | -------------------------------- |
+| `limit`   | integer | `20`    | `1 – 100`   | Number of top products to return |
 
 **Example Request:**
 
@@ -709,9 +713,9 @@ Monthly revenue trend across all years, or filtered to a single year.
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `year` | integer | `null` (all years) | Filter results to a specific year, e.g. `2004` |
+| Parameter | Type    | Default            | Description                                    |
+| --------- | ------- | ------------------ | ---------------------------------------------- |
+| `year`    | integer | `null` (all years) | Filter results to a specific year, e.g. `2004` |
 
 **Example Requests:**
 
@@ -755,9 +759,9 @@ The final result and generated code are automatically saved to `saved_queries`.
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `question` | string | ✅ | The natural language question to analyze |
+| Field      | Type   | Required | Description                              |
+| ---------- | ------ | -------- | ---------------------------------------- |
+| `question` | string | ✅        | The natural language question to analyze |
 
 **Example Request:**
 
@@ -783,14 +787,14 @@ curl -X POST http://localhost:8000/analytics/analyze \
 
 **Response Fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `answer` | string | The agent's conclusive answer |
-| `iterations` | integer | Number of LLM rounds used |
-| `generated_code` | string \| null | Last Python code executed by the agent |
-| `saved_query_id` | integer \| null | ID of the auto-saved record in `saved_queries` |
-| `log_id` | integer \| null | ID in `analysis_logs` (used to retrieve per-turn details) |
-| `tool_trace` | array of strings | Ordered list of tool calls, e.g. `["observe_schema", "run_python_analysis", "final_answer"]` |
+| Field            | Type             | Description                                                                                  |
+| ---------------- | ---------------- | -------------------------------------------------------------------------------------------- |
+| `answer`         | string           | The agent's conclusive answer                                                                |
+| `iterations`     | integer          | Number of LLM rounds used                                                                    |
+| `generated_code` | string \| null   | Last Python code executed by the agent                                                       |
+| `saved_query_id` | integer \| null  | ID of the auto-saved record in `saved_queries`                                               |
+| `log_id`         | integer \| null  | ID in `analysis_logs` (used to retrieve per-turn details)                                    |
+| `tool_trace`     | array of strings | Ordered list of tool calls, e.g. `["observe_schema", "run_python_analysis", "final_answer"]` |
 
 **Possible Errors:** `401` Unauthorized · `422` Validation error (missing `question`) · `500` LLM or server error
 
@@ -802,10 +806,10 @@ List all past analysis runs (from `analysis_logs`).
 
 **Query Parameters:**
 
-| Parameter | Type | Default | Constraints | Description |
-|-----------|------|---------|-------------|-------------|
-| `skip` | integer | `0` | `≥ 0` | Offset |
-| `limit` | integer | `20` | `1 – 100` | Max records |
+| Parameter | Type    | Default | Constraints | Description |
+| --------- | ------- | ------- | ----------- | ----------- |
+| `skip`    | integer | `0`     | `≥ 0`       | Offset      |
+| `limit`   | integer | `20`    | `1 – 100`   | Max records |
 
 **Example Request:**
 
@@ -839,9 +843,9 @@ Retrieve every saved LLM turn for a specific analysis run, showing the agent's s
 
 **Path Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `log_id` | integer | The analysis log ID (from `POST /analytics/analyze → log_id`) |
+| Parameter | Type    | Description                                                   |
+| --------- | ------- | ------------------------------------------------------------- |
+| `log_id`  | integer | The analysis log ID (from `POST /analytics/analyze → log_id`) |
 
 **Example Request:**
 
@@ -1005,9 +1009,9 @@ Structured JSON result
 
 **Request Body:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `code` | string | ✅ | Valid Python source code |
+| Field  | Type   | Required | Description              |
+| ------ | ------ | -------- | ------------------------ |
+| `code` | string | ✅        | Valid Python source code |
 
 **Example Request:**
 
@@ -1033,40 +1037,45 @@ curl -X POST http://localhost:8000/skills/run_python_analysis \
 }
 ```
 
-**Response `200` — Security Violation:**
+**Response `403` — Security Violation:**
 
 ```json
 {
-  "status": "blocked",
-  "error_type": "SECURITY_VIOLATION",
-  "message": "Import of module 'os' is not allowed.",
-  "hint": "Use only pandas, numpy, math, statistics, datetime, re."
+  "detail": {
+    "status": "blocked",
+    "error_type": "SECURITY_VIOLATION",
+    "message": "Import of module 'os' is not allowed.",
+    "hint": "Use only pandas, numpy, math, statistics, datetime, re."
+  }
 }
 ```
 
-**Response `200` — Runtime Error:**
+**Response `422` — Runtime Error:**
 
 ```json
 {
-  "status": "failed",
-  "error_type": "RUNTIME_ERROR",
-  "message": "ZeroDivisionError: division by zero",
-  "hint": "Check your code logic and re-run."
+  "detail": {
+    "status": "failed",
+    "error_type": "RUNTIME_ERROR",
+    "message": "ZeroDivisionError: division by zero"
+  }
 }
 ```
 
-**Response `200` — Timeout:**
+**Response `408` — Timeout:**
 
 ```json
 {
-  "status": "failed",
-  "error_type": "EXECUTION_TIMEOUT",
-  "message": "Execution exceeded 30 seconds.",
-  "hint": "Simplify the query or reduce the dataset size."
+  "detail": {
+    "status": "failed",
+    "error_type": "EXECUTION_TIMEOUT",
+    "message": "Execution exceeded 30 seconds.",
+    "hint": "Simplify the query or reduce the dataset size."
+  }
 }
 ```
 
-**Possible Errors:** `401` Unauthorized · `422` Validation error (missing `code`) — execution errors are returned as HTTP `200` with `status: blocked/failed`
+**Possible Errors:** `401` Unauthorized · `403` Security/SQL violation · `408` Timeout · `422` Syntax/runtime error or missing `code` field · `500` Worker error
 
 ---
 
@@ -1074,11 +1083,11 @@ curl -X POST http://localhost:8000/skills/run_python_analysis \
 
 The `tool_trace` field returned by `POST /analytics/analyze` lists every tool called by the agent in order:
 
-| Tool Name | Description |
-|-----------|-------------|
-| `observe_schema` | Agent inspected the database schema |
-| `run_python_analysis` | Agent executed a Python code block |
-| `final_answer` | Agent stopped the loop and returned the answer |
+| Tool Name             | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| `observe_schema`      | Agent inspected the database schema            |
+| `run_python_analysis` | Agent executed a Python code block             |
+| `final_answer`        | Agent stopped the loop and returned the answer |
 
 **Typical pattern:**
 

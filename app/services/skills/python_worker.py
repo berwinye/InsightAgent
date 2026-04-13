@@ -38,13 +38,17 @@ _FORBIDDEN_SQL_RE = _re.compile(
 )
 
 
+class _SqlBlocked(RuntimeError):
+    """Raised when a SQL statement violates the read-only policy."""
+
+
 def _check_sql(sql: str) -> None:
     stripped = sql.strip().lower()
     if not any(stripped.startswith(k) for k in _ALLOWED_SQL_START):
-        raise RuntimeError(f"Only SELECT / WITH queries are allowed.")
+        raise _SqlBlocked("Only SELECT / WITH queries are allowed.")
     match = _FORBIDDEN_SQL_RE.search(sql)
     if match:
-        raise RuntimeError(f"Forbidden SQL keyword detected: '{match.group()}'.")
+        raise _SqlBlocked(f"Forbidden SQL keyword detected: '{match.group()}'.")
 
 
 def _build_read_sql(engine: sqlalchemy.engine.Engine):
@@ -157,12 +161,19 @@ def main() -> None:
             "stdout": captured,
             "summary": {"line_count": len(lines)},
         }
+    except _SqlBlocked as exc:
+        sys.stdout = old_stdout
+        result = {
+            "status": "failed",
+            "error_type": "SQL_BLOCKED",
+            "message": str(exc),
+        }
     except Exception:
         sys.stdout = old_stdout
         tb = traceback.format_exc()
         result = {
             "status": "failed",
-            "error_type": "EXECUTION_ERROR",
+            "error_type": "RUNTIME_ERROR",
             "message": tb,
         }
     finally:

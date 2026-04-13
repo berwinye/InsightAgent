@@ -21,8 +21,8 @@ def test_valid_analysis_code_succeeds(client: TestClient):
 def test_import_os_is_blocked(client: TestClient):
     code = "import os\nprint(os.getcwd())"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
     assert data["error_type"] == "SECURITY_VIOLATION"
     assert "os" in data["message"]
@@ -31,16 +31,16 @@ def test_import_os_is_blocked(client: TestClient):
 def test_import_sys_is_blocked(client: TestClient):
     code = "import sys\nprint(sys.version)"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
 
 
 def test_open_call_is_blocked(client: TestClient):
     code = "f = open('/etc/passwd', 'r')\nprint(f.read())"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
     assert "open" in data["message"]
 
@@ -48,8 +48,8 @@ def test_open_call_is_blocked(client: TestClient):
 def test_eval_call_is_blocked(client: TestClient):
     code = "result = eval('1+1')\nprint(result)"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
 
 
@@ -59,24 +59,24 @@ def test_non_select_sql_is_blocked(client: TestClient):
         "VALUES (\"x\", \"x\")')\nprint(df)"
     )
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code in (403, 422)
+    data = resp.json()["detail"]
     assert data["status"] in ("blocked", "failed")
 
 
 def test_syntax_error_returns_error(client: TestClient):
     code = "def foo(\n    print('bad')"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 422
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
 
 
 def test_runtime_error_returns_structured_error(client: TestClient):
     code = "x = 1 / 0\nprint(x)"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 422
+    data = resp.json()["detail"]
     assert data["status"] == "failed"
     assert "ZeroDivisionError" in data["message"]
 
@@ -111,8 +111,8 @@ def test_infinite_loop_is_terminated(client: TestClient, short_timeout):
     """An infinite loop must be killed and return EXECUTION_TIMEOUT error."""
     code = "while True:\n    pass"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 408
+    data = resp.json()["detail"]
     assert data["status"] == "failed"
     assert data["error_type"] == "EXECUTION_TIMEOUT"
     assert "exceeded" in data["message"].lower() or "timeout" in data["message"].lower()
@@ -122,8 +122,8 @@ def test_sleep_beyond_limit_is_terminated(client: TestClient, short_timeout):
     """Sleeping beyond the timeout must also be terminated."""
     code = "import math\nmath.factorial(0)\nwhile True:\n    x = 1 + 1"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 408
+    data = resp.json()["detail"]
     assert data["status"] == "failed"
     assert data["error_type"] == "EXECUTION_TIMEOUT"
 
@@ -142,7 +142,8 @@ def test_timeout_error_includes_hint(client: TestClient, short_timeout):
     """Timeout response must include a hint field to guide the LLM agent."""
     code = "while True:\n    pass"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    data = resp.json()
+    assert resp.status_code == 408
+    data = resp.json()["detail"]
     assert data.get("hint") is not None, "Timeout response must include a 'hint' field"
 
 
@@ -181,8 +182,8 @@ def test_jailbreak_dunder_import_os_is_blocked(client: TestClient):
     """Using __import__('os') to bypass the import keyword must be blocked."""
     code = "x = __import__('os')\nprint(x.getcwd())"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
     assert data["error_type"] == "SECURITY_VIOLATION"
 
@@ -191,8 +192,8 @@ def test_jailbreak_os_environ_access_is_blocked(client: TestClient):
     """Attempting to read environment variables through os must be blocked."""
     code = "import os\nprint(os.environ.get('QWEN_API_KEY', 'not_found'))"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
     assert data["error_type"] == "SECURITY_VIOLATION"
 
@@ -201,8 +202,8 @@ def test_jailbreak_subprocess_spawn_is_blocked(client: TestClient):
     """Attempting to spawn a shell subprocess must be blocked before execution."""
     code = "import subprocess\nresult = subprocess.run(['pwd'], capture_output=True)\nprint(result.stdout.decode())"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
     assert data["error_type"] == "SECURITY_VIOLATION"
 
@@ -211,7 +212,7 @@ def test_jailbreak_write_to_filesystem_is_blocked(client: TestClient):
     """Attempting to write a file using open() in write mode must be blocked."""
     code = "f = open('/tmp/pwned.txt', 'w')\nf.write('hacked')\nf.close()"
     resp = client.post("/skills/run_python_analysis", json={"code": code})
-    assert resp.status_code == 200
-    data = resp.json()
+    assert resp.status_code == 403
+    data = resp.json()["detail"]
     assert data["status"] == "blocked"
     assert data["error_type"] == "SECURITY_VIOLATION"
