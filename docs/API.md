@@ -90,7 +90,7 @@ All error responses are JSON objects. Standard HTTP status codes are used throug
 | `400` | Bad Request | Malformed request body or invalid parameter |
 | `401` | Unauthorized | Missing or invalid `X-API-Key` header |
 | `404` | Not Found | Requested resource does not exist |
-| `422` | Unprocessable Entity | Request body fails Pydantic validation |
+| `422` | Unprocessable Entity | Request body, path parameter, or query parameter fails validation |
 | `500` | Internal Server Error | Unexpected server-side error |
 
 ### Structured Error Response (401 / 404 / 500)
@@ -101,6 +101,52 @@ All error responses are JSON objects. Standard HTTP status codes are used throug
     "error": "invalid_api_key",
     "message": "Invalid or missing X-API-Key header."
   }
+}
+```
+
+### 422 Validation Error Response
+
+FastAPI returns a structured list of all validation failures. Examples:
+
+**Invalid path parameter type** (e.g. `GET /employees/not-a-number`):
+```json
+{
+  "detail": [
+    {
+      "type": "int_parsing",
+      "loc": ["path", "employee_id"],
+      "msg": "Input should be a valid integer, unable to parse string as an integer",
+      "input": "not-a-number"
+    }
+  ]
+}
+```
+
+**Query parameter out of range** (e.g. `GET /products?limit=0`):
+```json
+{
+  "detail": [
+    {
+      "type": "greater_than_equal",
+      "loc": ["query", "limit"],
+      "msg": "Input should be greater than or equal to 1",
+      "input": "0"
+    }
+  ]
+}
+```
+
+**Missing required body field** (e.g. `POST /saved-queries` without `title`):
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "title"],
+      "msg": "Field required",
+      "input": {}
+    }
+  ]
 }
 ```
 
@@ -259,7 +305,7 @@ curl http://localhost:8000/employees/1002 \
 }
 ```
 
-**Possible Errors:** `401` Unauthorized · `404` Employee not found · `500` Server error
+**Possible Errors:** `401` Unauthorized · `404` Employee not found · `422` Non-integer `employee_id` · `500` Server error
 
 ---
 
@@ -476,7 +522,7 @@ curl http://localhost:8000/saved-queries/1 \
 }
 ```
 
-**Possible Errors:** `401` Unauthorized · `404` Query not found · `500` Server error
+**Possible Errors:** `401` Unauthorized · `404` Query not found · `422` Non-integer `query_id` · `500` Server error
 
 ---
 
@@ -846,7 +892,7 @@ curl http://localhost:8000/analytics/logs/5/turns \
 }
 ```
 
-**Possible Errors:** `401` Unauthorized · `404` Log not found · `500` Server error
+**Possible Errors:** `401` Unauthorized · `404` Log not found · `422` Non-integer `log_id` · `500` Server error
 
 ---
 
