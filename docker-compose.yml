@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: insightagent_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: enterprise_api
+      MYSQL_APP_RW_USER: ${MYSQL_APP_RW_USER}
+      MYSQL_APP_RW_PASSWORD: ${MYSQL_APP_RW_PASSWORD}
+      MYSQL_APP_RO_USER: ${MYSQL_APP_RO_USER}
+      MYSQL_APP_RO_PASSWORD: ${MYSQL_APP_RO_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./classicmodels.sql:/tmp/classicmodels.sql:ro
+      - ./docker/mysql/init/01_setup.sh:/docker-entrypoint-initdb.d/01_setup.sh:ro
+      - ./docker/mysql/init/02_import.sh:/docker-entrypoint-initdb.d/02_import.sh:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+
+  api:
+    build: .
+    container_name: insightagent_api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+
+volumes:
+  mysql_data:
