@@ -1,5 +1,6 @@
 """Tests for POST /skills/run_python_analysis."""
 import pytest
+import app.services.skills.run_python_analysis as _rpa_module
 from fastapi.testclient import TestClient
 
 
@@ -93,3 +94,53 @@ def test_pandas_analysis_works(client: TestClient):
     data = resp.json()
     assert data["status"] == "success"
     assert "Total revenue" in data["stdout"]
+
+
+# ---------------------------------------------------------------------------
+# Timeout tests  (monkeypatch EXECUTION_TIMEOUT to 3 s so tests run fast)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def short_timeout(monkeypatch):
+    """Temporarily reduce the subprocess timeout to 3 seconds."""
+    monkeypatch.setattr(_rpa_module, "EXECUTION_TIMEOUT", 3)
+    yield
+
+
+def test_infinite_loop_is_terminated(client: TestClient, short_timeout):
+    """An infinite loop must be killed and return EXECUTION_TIMEOUT error."""
+    code = "while True:\n    pass"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "failed"
+    assert data["error_type"] == "EXECUTION_TIMEOUT"
+    assert "exceeded" in data["message"].lower() or "timeout" in data["message"].lower()
+
+
+def test_sleep_beyond_limit_is_terminated(client: TestClient, short_timeout):
+    """Sleeping beyond the timeout must also be terminated."""
+    code = "import math\nmath.factorial(0)\nwhile True:\n    x = 1 + 1"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "failed"
+    assert data["error_type"] == "EXECUTION_TIMEOUT"
+
+
+def test_normal_code_finishes_within_timeout(client: TestClient, short_timeout):
+    """Normal fast code must still succeed even with a short timeout."""
+    code = "print(sum(range(1000)))"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "success"
+    assert "499500" in data["stdout"]
+
+
+def test_timeout_error_includes_hint(client: TestClient, short_timeout):
+    """Timeout response must include a hint field to guide the LLM agent."""
+    code = "while True:\n    pass"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    data = resp.json()
+    assert data.get("hint") is not None, "Timeout response must include a 'hint' field"
