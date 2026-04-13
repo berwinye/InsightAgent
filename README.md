@@ -40,6 +40,19 @@ An enterprise sales data Web API system built with **FastAPI + MySQL 8 + Docker*
 
 ---
 
+## API Documentation
+
+| Format | Location |
+|--------|---------|
+| **Full API Reference (Markdown)** | [`docs/API.md`](docs/API.md) |
+| **Interactive Swagger UI** | `http://localhost:8000/docs` (requires running stack) |
+| **OpenAPI JSON** | `http://localhost:8000/openapi.json` |
+
+`docs/API.md` covers every endpoint, all parameters, example requests/responses, authentication flow, and error codes.  
+To export as PDF: open `docs/API.md` in a Markdown viewer (e.g. VS Code → *Export PDF*, or Pandoc: `pandoc docs/API.md -o docs/API.pdf`).
+
+---
+
 ## Directory Structure
 
 ```
