@@ -20,6 +20,33 @@
 
 ---
 
+## Endpoint Overview
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/` | Basic health check | No |
+| GET | `/health` | Detailed health check with DB connectivity | No |
+| GET | `/employees` | List all employees (paginated) | Yes |
+| GET | `/employees/{employee_id}` | Get one employee by ID | Yes |
+| GET | `/products` | List all products (paginated) | Yes |
+| GET | `/products/{product_code}` | Get one product by code | Yes |
+| POST | `/saved-queries` | Create a new saved query | Yes |
+| GET | `/saved-queries` | List all saved queries (paginated) | Yes |
+| GET | `/saved-queries/{query_id}` | Get one saved query by ID | Yes |
+| PUT | `/saved-queries/{query_id}` | Partially update a saved query | Yes |
+| DELETE | `/saved-queries/{query_id}` | Delete a saved query | Yes |
+| GET | `/analytics/store-sales-summary` | Total revenue and order count by office | Yes |
+| GET | `/analytics/product-ranking` | Products ranked by revenue | Yes |
+| GET | `/analytics/employee-performance` | Sales KPIs per employee | Yes |
+| GET | `/analytics/sales-trend` | Monthly revenue trend (optional year filter) | Yes |
+| POST | `/analytics/analyze` | Natural language analysis via Qwen agent | Yes |
+| GET | `/analytics/logs` | List past analysis run logs | Yes |
+| GET | `/analytics/logs/{log_id}/turns` | Get per-turn LLM details for an analysis run | Yes |
+| POST | `/skills/observe_schema` | Return full database schema | Yes |
+| POST | `/skills/run_python_analysis` | Execute sandboxed Python analysis code | Yes |
+
+---
+
 ## 1. Authentication
 
 All business endpoints require an **API key** passed as an HTTP header.
@@ -140,6 +167,8 @@ Detailed health check including database connectivity. No authentication require
 }
 ```
 
+**Possible Errors:** None — always returns `200`.
+
 ---
 
 ## 4. Employees
@@ -186,6 +215,8 @@ curl "http://localhost:8000/employees?skip=0&limit=10" \
 }
 ```
 
+**Possible Errors:** `401` Unauthorized · `422` Invalid query parameter · `500` Server error
+
 ---
 
 ### `GET /employees/{employee_id}`
@@ -227,6 +258,8 @@ curl http://localhost:8000/employees/1002 \
   "detail": "Employee 9999 not found."
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `404` Employee not found · `500` Server error
 
 ---
 
@@ -275,6 +308,8 @@ curl "http://localhost:8000/products?skip=0&limit=5" \
 }
 ```
 
+**Possible Errors:** `401` Unauthorized · `422` Invalid query parameter · `500` Server error
+
 ---
 
 ### `GET /products/{product_code}`
@@ -317,6 +352,8 @@ curl http://localhost:8000/products/S10_1678 \
   "detail": "Product INVALID_CODE not found."
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `404` Product not found · `500` Server error
 
 ---
 
@@ -367,6 +404,8 @@ curl -X POST http://localhost:8000/saved-queries \
 }
 ```
 
+**Possible Errors:** `401` Unauthorized · `422` Validation error (missing required field) · `500` Server error
+
 ---
 
 ### `GET /saved-queries`
@@ -406,6 +445,8 @@ curl "http://localhost:8000/saved-queries?skip=0&limit=10" \
 }
 ```
 
+**Possible Errors:** `401` Unauthorized · `422` Invalid query parameter · `500` Server error
+
 ---
 
 ### `GET /saved-queries/{query_id}`
@@ -434,6 +475,8 @@ curl http://localhost:8000/saved-queries/1 \
   "detail": "SavedQuery 999 not found."
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `404` Query not found · `500` Server error
 
 ---
 
@@ -475,6 +518,8 @@ curl -X PUT http://localhost:8000/saved-queries/1 \
 }
 ```
 
+**Possible Errors:** `401` Unauthorized · `404` Query not found · `422` Validation error · `500` Server error
+
 ---
 
 ### `DELETE /saved-queries/{query_id}`
@@ -503,6 +548,8 @@ curl -X DELETE http://localhost:8000/saved-queries/1 \
   "detail": "SavedQuery 999 not found."
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `404` Query not found · `500` Server error
 
 ---
 
@@ -538,6 +585,8 @@ curl http://localhost:8000/analytics/store-sales-summary \
 ]
 ```
 
+**Possible Errors:** `401` Unauthorized · `500` Server error
+
 ---
 
 ### `GET /analytics/product-ranking`
@@ -571,6 +620,8 @@ curl "http://localhost:8000/analytics/product-ranking?limit=5" \
 ]
 ```
 
+**Possible Errors:** `401` Unauthorized · `422` Invalid `limit` parameter · `500` Server error
+
 ---
 
 ### `GET /analytics/employee-performance`
@@ -601,6 +652,8 @@ curl http://localhost:8000/analytics/employee-performance \
   }
 ]
 ```
+
+**Possible Errors:** `401` Unauthorized · `500` Server error
 
 ---
 
@@ -638,6 +691,8 @@ curl "http://localhost:8000/analytics/sales-trend?year=2004" \
   }
 ]
 ```
+
+**Possible Errors:** `401` Unauthorized · `422` Invalid `year` parameter · `500` Server error
 
 ---
 
@@ -691,6 +746,8 @@ curl -X POST http://localhost:8000/analytics/analyze \
 | `log_id` | integer \| null | ID in `analysis_logs` (used to retrieve per-turn details) |
 | `tool_trace` | array of strings | Ordered list of tool calls, e.g. `["observe_schema", "run_python_analysis", "final_answer"]` |
 
+**Possible Errors:** `401` Unauthorized · `422` Validation error (missing `question`) · `500` LLM or server error
+
 ---
 
 ### `GET /analytics/logs`
@@ -725,6 +782,8 @@ curl http://localhost:8000/analytics/logs \
   }
 ]
 ```
+
+**Possible Errors:** `401` Unauthorized · `422` Invalid query parameter · `500` Server error
 
 ---
 
@@ -786,6 +845,8 @@ curl http://localhost:8000/analytics/logs/5/turns \
   "detail": "Analysis log 999 not found."
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `404` Log not found · `500` Server error
 
 ---
 
@@ -858,6 +919,8 @@ curl -X POST http://localhost:8000/skills/observe_schema \
   }
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `500` Schema read failed
 
 ---
 
@@ -956,6 +1019,8 @@ curl -X POST http://localhost:8000/skills/run_python_analysis \
   "hint": "Simplify the query or reduce the dataset size."
 }
 ```
+
+**Possible Errors:** `401` Unauthorized · `422` Validation error (missing `code`) — execution errors are returned as HTTP `200` with `status: blocked/failed`
 
 ---
 
