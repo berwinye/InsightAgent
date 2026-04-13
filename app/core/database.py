@@ -8,12 +8,16 @@ rw_engine = create_engine(
     settings.RW_DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=3600,
+    pool_size=10,
+    max_overflow=20,
 )
 
 ro_engine = create_engine(
     settings.RO_DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=3600,
+    pool_size=10,
+    max_overflow=20,
 )
 
 RWSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=rw_engine)
