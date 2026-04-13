@@ -26,7 +26,7 @@ def _analyze(client: TestClient, question: str) -> dict:
 
 def test_simple_question_uses_at_least_3_steps(client: TestClient):
     """Even a simple question must: observe_schema → run_python_analysis → final_answer."""
-    result = _analyze(client, "各产品线的总销售额是多少？")
+    result = _analyze(client, "What is the total sales amount for each product line?")
     trace = result["tool_trace"]
 
     assert "observe_schema" in trace, "Agent must call observe_schema"
@@ -49,9 +49,9 @@ def test_drilldown_uses_multiple_code_executions(client: TestClient):
     """
     result = _analyze(
         client,
-        "请分两步执行："
-        "第一步，找出历史总销量（数量）最高的单个产品的productCode；"
-        "第二步，用第一步得到的productCode，查询该产品每年的销售数量和销售额变化。",
+        "Execute in two steps: "
+        "Step 1 – find the productCode of the single product with the highest total quantity sold in history; "
+        "Step 2 – using that productCode from step 1, query the annual sales quantity and revenue trend for that product.",
     )
     trace = result["tool_trace"]
 
@@ -69,7 +69,7 @@ def test_drilldown_uses_multiple_code_executions(client: TestClient):
 
 def test_schema_observed_before_code(client: TestClient):
     """Agent should always call observe_schema BEFORE the first run_python_analysis."""
-    result = _analyze(client, "哪个客户的总付款金额最高？")
+    result = _analyze(client, "Which customer has the highest total payment amount?")
     trace = result["tool_trace"]
 
     assert "observe_schema" in trace
@@ -97,9 +97,10 @@ def test_three_stage_investigation(client: TestClient):
     """
     result = _analyze(
         client,
-        "请分三步分析：第一步找出总销售额最低的销售代表；"
-        "第二步列出该销售代表负责的所有客户；"
-        "第三步查看这些客户近两年的订单记录，判断客户是否流失。",
+        "Analyze in three steps: "
+        "Step 1 – find the sales representative with the lowest total sales revenue; "
+        "Step 2 – list all customers managed by that sales rep; "
+        "Step 3 – inspect the order history of those customers and assess whether they have churned.",
     )
     trace = result["tool_trace"]
 
@@ -125,10 +126,11 @@ def test_anomaly_detect_then_explain(client: TestClient):
     """
     result = _analyze(
         client,
-        "请按以下两个步骤分析："
-        "第一步，计算每个产品的库存量除以历史总销量之比，找出比值最大（即库存最积压）的产品productCode；"
-        "第二步，用第一步得到的productCode查询该产品所有历史订单明细，"
-        "确认它的实际销售情况，并给出库存风险结论。",
+        "Analyze in two steps: "
+        "Step 1 – compute the ratio of quantityInStock to total historical sales quantity for each product, "
+        "and find the productCode with the highest ratio (most overstocked); "
+        "Step 2 – using that productCode from step 1, retrieve all historical order details for that product, "
+        "confirm its actual sales performance, and give an inventory risk conclusion.",
     )
     trace = result["tool_trace"]
 
@@ -147,7 +149,7 @@ def test_anomaly_detect_then_explain(client: TestClient):
 
 def test_tool_trace_in_response(client: TestClient):
     """tool_trace field must be present and non-empty in every /analytics/analyze response."""
-    result = _analyze(client, "总订单数是多少？")
+    result = _analyze(client, "How many orders are there in total?")
     assert "tool_trace" in result
     assert isinstance(result["tool_trace"], list)
     assert len(result["tool_trace"]) >= 2, (
@@ -175,10 +177,10 @@ def test_full_trace_five_step_question(client: TestClient):
     """
     result = _analyze(
         client,
-        "请严格分三步执行，每步单独运行代码："
-        "第一步，找出历史上单月总销售额最高的具体年份和月份（输出year和month的具体数值）；"
-        "第二步，用第一步得到的具体年份和月份，查询那个月每位销售代表的销售总额排名；"
-        "第三步，取第二步排名第一的销售代表的employeeNumber，查询他负责的所有客户及其creditLimit。",
+        "Run three separate code executions: "
+        "Step 1 – find the exact year and month with the highest single-month total sales (print the year and month values); "
+        "Step 2 – using the exact year and month from step 1, rank each sales representative by total revenue in that month; "
+        "Step 3 – using the employeeNumber of the top-ranked rep from step 2, list all their customers and credit limits.",
     )
     trace = result["tool_trace"]
 

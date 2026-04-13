@@ -217,7 +217,7 @@ def test_agent_finds_dead_stock_anomaly(client: TestClient):
     """Agent should identify S18_3233 as a dead-stock product via natural language."""
     resp = client.post(
         "/analytics/analyze",
-        json={"question": "找出库存量最高但从未有任何销售订单的产品，列出产品编号、名称和库存数量"},
+        json={"question": "Find the product with the highest stock quantity that has never had any sales orders. List its product code, name, and stock quantity."},
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -232,7 +232,7 @@ def test_agent_anomaly_report_is_saved(client: TestClient):
     """Agent NLQ should auto-save the result to saved_queries."""
     resp = client.post(
         "/analytics/analyze",
-        json={"question": "有没有以低于采购成本价卖出的订单？列出具体数量"},
+        json={"question": "Are there any orders where products were sold below their purchase cost price? List the exact count."},
     )
     assert resp.status_code == 200
     data = resp.json()
