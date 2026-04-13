@@ -58,3 +58,19 @@ def test_observe_schema_stable_structure(client: TestClient):
     r1 = client.post("/skills/observe_schema").json()
     r2 = client.post("/skills/observe_schema").json()
     assert r1["tables"] == r2["tables"]
+
+
+# ---------------------------------------------------------------------------
+# Negative / Authentication Tests
+# ---------------------------------------------------------------------------
+
+def test_wrong_api_key_returns_401(client: TestClient):
+    """Any request with an invalid X-API-Key must be rejected with 401."""
+    resp = client.post("/skills/observe_schema", headers={"X-API-Key": "wrong-key-xyz"})
+    assert resp.status_code == 401
+
+
+def test_empty_api_key_returns_401(client: TestClient):
+    """An empty X-API-Key header value must be rejected with 401."""
+    resp = client.post("/skills/observe_schema", headers={"X-API-Key": ""})
+    assert resp.status_code == 401

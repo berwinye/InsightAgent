@@ -144,3 +144,74 @@ def test_timeout_error_includes_hint(client: TestClient, short_timeout):
     resp = client.post("/skills/run_python_analysis", json={"code": code})
     data = resp.json()
     assert data.get("hint") is not None, "Timeout response must include a 'hint' field"
+
+
+# ---------------------------------------------------------------------------
+# Negative / Authentication Tests
+# ---------------------------------------------------------------------------
+
+def test_wrong_api_key_returns_401(client: TestClient):
+    resp = client.post(
+        "/skills/run_python_analysis",
+        json={"code": "print('hello')"},
+        headers={"X-API-Key": "invalid-key"},
+    )
+    assert resp.status_code == 401
+
+
+def test_missing_code_field_returns_422(client: TestClient):
+    """POST with an empty body must be rejected — code field is required."""
+    resp = client.post("/skills/run_python_analysis", json={})
+    assert resp.status_code == 422
+
+
+def test_empty_code_string_is_blocked(client: TestClient):
+    """An empty code string produces a syntax or runtime error, not a 500."""
+    resp = client.post("/skills/run_python_analysis", json={"code": ""})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] in ("blocked", "failed")
+
+
+# ---------------------------------------------------------------------------
+# Jailbreak / Sandbox Escape Tests
+# ---------------------------------------------------------------------------
+
+def test_jailbreak_dunder_import_os_is_blocked(client: TestClient):
+    """Using __import__('os') to bypass the import keyword must be blocked."""
+    code = "x = __import__('os')\nprint(x.getcwd())"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "blocked"
+    assert data["error_type"] == "SECURITY_VIOLATION"
+
+
+def test_jailbreak_os_environ_access_is_blocked(client: TestClient):
+    """Attempting to read environment variables through os must be blocked."""
+    code = "import os\nprint(os.environ.get('QWEN_API_KEY', 'not_found'))"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "blocked"
+    assert data["error_type"] == "SECURITY_VIOLATION"
+
+
+def test_jailbreak_subprocess_spawn_is_blocked(client: TestClient):
+    """Attempting to spawn a shell subprocess must be blocked before execution."""
+    code = "import subprocess\nresult = subprocess.run(['pwd'], capture_output=True)\nprint(result.stdout.decode())"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "blocked"
+    assert data["error_type"] == "SECURITY_VIOLATION"
+
+
+def test_jailbreak_write_to_filesystem_is_blocked(client: TestClient):
+    """Attempting to write a file using open() in write mode must be blocked."""
+    code = "f = open('/tmp/pwned.txt', 'w')\nf.write('hacked')\nf.close()"
+    resp = client.post("/skills/run_python_analysis", json={"code": code})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "blocked"
+    assert data["error_type"] == "SECURITY_VIOLATION"

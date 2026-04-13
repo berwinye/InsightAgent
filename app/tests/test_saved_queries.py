@@ -76,3 +76,47 @@ def test_update_nonexistent_returns_404(client: TestClient):
 def test_delete_nonexistent_returns_404(client: TestClient):
     resp = client.delete("/saved-queries/999999")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Negative / Invalid Input Tests
+# ---------------------------------------------------------------------------
+
+def test_wrong_api_key_returns_401(client: TestClient):
+    resp = client.get("/saved-queries", headers={"X-API-Key": "totally-wrong-key"})
+    assert resp.status_code == 401
+
+
+def test_wrong_api_key_on_post_returns_401(client: TestClient):
+    resp = client.post("/saved-queries", json=CREATE_PAYLOAD, headers={"X-API-Key": "bad-key"})
+    assert resp.status_code == 401
+
+
+def test_create_missing_all_fields_returns_422(client: TestClient):
+    """POST with empty body must be rejected — title and natural_language_query are required."""
+    resp = client.post("/saved-queries", json={})
+    assert resp.status_code == 422
+
+
+def test_create_missing_natural_language_query_returns_422(client: TestClient):
+    """POST with only title but no natural_language_query must be rejected."""
+    resp = client.post("/saved-queries", json={"title": "Incomplete"})
+    assert resp.status_code == 422
+
+
+def test_list_limit_zero_returns_422(client: TestClient):
+    """limit=0 violates the ge=1 constraint and must be rejected."""
+    resp = client.get("/saved-queries?limit=0")
+    assert resp.status_code == 422
+
+
+def test_list_negative_skip_returns_422(client: TestClient):
+    """skip=-1 violates the ge=0 constraint and must be rejected."""
+    resp = client.get("/saved-queries?skip=-1")
+    assert resp.status_code == 422
+
+
+def test_get_non_integer_id_returns_422(client: TestClient):
+    """A non-integer path segment for query_id must be rejected with 422."""
+    resp = client.get("/saved-queries/not-a-number")
+    assert resp.status_code == 422
