@@ -16,14 +16,14 @@ The system is built on the Classic Models sales dataset and exposes 19 REST endp
 
 ## 2. Technology Stack Justification
 
-| Component | Choice | Justification |
-|-----------|--------|---------------|
-| **API Framework** | FastAPI (Python 3.11) | Async-ready, built-in Pydantic validation, auto-generates OpenAPI/Swagger UI with zero extra code |
-| **Database** | MySQL 8 | Mature ACID-compliant RDBMS; chosen over PostgreSQL for wider hosting compatibility and because the Classic Models dataset is natively distributed as MySQL SQL |
-| **ORM** | SQLAlchemy 2.0 | Declarative models reduce boilerplate; the dual-session pattern (read-write / read-only) is cleanly expressed through separate `sessionmaker` factories |
-| **LLM** | Qwen via Alibaba Bailian | OpenAI-compatible API — the `openai` Python client is used with a custom `base_url`, making the provider swappable by changing one environment variable |
-| **Containerisation** | Docker + Docker Compose | Eliminates "works on my machine" problems; MySQL initialisation scripts run automatically on first boot |
-| **Testing** | pytest + pytest-rerunfailures | Standard Python testing framework; `rerunfailures` handles transient LLM API flakiness without manual intervention |
+| Component            | Choice                        | Justification                                                                                                                                                   |
+| -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API Framework**    | FastAPI (Python 3.11)         | Async-ready, built-in Pydantic validation, auto-generates OpenAPI/Swagger UI with zero extra code                                                               |
+| **Database**         | MySQL 8                       | Mature ACID-compliant RDBMS; chosen over PostgreSQL for wider hosting compatibility and because the Classic Models dataset is natively distributed as MySQL SQL |
+| **ORM**              | SQLAlchemy 2.0                | Declarative models reduce boilerplate; the dual-session pattern (read-write / read-only) is cleanly expressed through separate `sessionmaker` factories         |
+| **LLM**              | Qwen via Alibaba Bailian      | OpenAI-compatible API — the `openai` Python client is used with a custom `base_url`, making the provider swappable by changing one environment variable         |
+| **Containerisation** | Docker + Docker Compose       | Eliminates "works on my machine" problems; MySQL initialisation scripts run automatically on first boot                                                         |
+| **Testing**          | pytest + pytest-rerunfailures | Standard Python testing framework; `rerunfailures` handles transient LLM API flakiness without manual intervention                                              |
 
 ### Why Python over Java, Go, or Node.js?
 
@@ -60,49 +60,7 @@ The analytics endpoints (`store-sales-summary`, `product-ranking`, etc.) were in
 
 The system consists of two Docker containers and one external service, connected as shown below.
 
-```mermaid
-graph TB
-    Client["🖥️ Client\n(curl / Swagger UI / Tests)"]
-
-    subgraph Cloud["☁️ External"]
-        Qwen["Qwen LLM API\n(Alibaba Bailian)"]
-    end
-
-    subgraph Docker["🐳 Docker Compose Network"]
-
-        subgraph API["FastAPI Container  :8000"]
-            Auth["X-API-Key Auth"]
-            Routes["Routers\nemployees · products\nsaved_queries · analytics · skills"]
-            AgentSvc["Agent Service\n(self-loop, max 8 iters)"]
-            AnalyticsSvc["Analytics Service\n(pre-built SQL queries)"]
-            subgraph Sandbox["Sandboxed Code Execution"]
-                ASTGuard["AST Guard"]
-                SQLGuard["SQL Guard"]
-                Worker["Subprocess Worker\n(30s timeout, app_ro)"]
-            end
-        end
-
-        subgraph DB["MySQL 8 Container  :3306"]
-            RW["app_rw\nSELECT/INSERT/UPDATE/DELETE"]
-            RO["app_ro\nSELECT only"]
-            Tables["Tables\nemployees · products · orders\ncustomers · payments\nsaved_queries · analysis_logs"]
-        end
-    end
-
-    Client -->|"HTTP + X-API-Key"| Auth
-    Auth --> Routes
-    Routes --> AgentSvc
-    Routes --> AnalyticsSvc
-    Routes --> Sandbox
-    AgentSvc -->|"tool calls"| Sandbox
-    AgentSvc <-->|"LLM API calls\n(HTTPS)"| Qwen
-    AnalyticsSvc -->|"read queries"| RO
-    Sandbox --> ASTGuard --> SQLGuard --> Worker
-    Worker -->|"SELECT via app_ro"| RO
-    Routes -->|"CRUD"| RW
-    RW --- Tables
-    RO --- Tables
-```
+![](/Users/berwin/Desktop/project/cw_web/InsightAgent/docs/image/1.jpeg)
 
 ---
 
@@ -123,73 +81,39 @@ Concurrency is handled at the MySQL engine level through InnoDB row-level lockin
 
 Rather than a single database user, the system uses two accounts with different permissions:
 
-| Account | Permissions | Used by |
-|---------|-------------|---------|
-| `app_rw` | SELECT / INSERT / UPDATE / DELETE | CRUD routes |
-| `app_ro` | SELECT only | Agent sandbox, analytics, schema reader |
+| Account  | Permissions                       | Used by                                 |
+| -------- | --------------------------------- | --------------------------------------- |
+| `app_rw` | SELECT / INSERT / UPDATE / DELETE | CRUD routes                             |
+| `app_ro` | SELECT only                       | Agent sandbox, analytics, schema reader |
 
 This provides **defence in depth**: even if an attacker crafted code that somehow bypassed all Python-level guards and reached the database driver, the `app_ro` account enforces a hard write-prohibition at the database level.
 
-### 5.2 Three-Layer Code Execution Sandbox
+### 5.2 Three-Phase Security Policy Orchestration
 
-User-submitted Python code (from the LLM or directly via the API) passes through three sequential security layers before execution:
+User-submitted Python code (from the LLM or directly via the API) passes through three sequential security phases before execution:
 
-```mermaid
-flowchart TD
-    Input["Submitted Python Code"]
-    AST["Layer 1 — AST Guard\n(static analysis before execution)"]
-    SQL["Layer 2 — SQL Guard\n(keyword check on read_sql calls)"]
-    Worker["Layer 3 — Subprocess Worker\n(isolated child process, app_ro, 30s timeout)"]
-    Result["Structured JSON Result"]
+![](/Users/berwin/Desktop/project/cw_web/InsightAgent/docs/image/2.png)
 
-    Input --> AST
-    AST -->|"forbidden import/call detected"| Err1["403 SECURITY_VIOLATION"]
-    AST -->|"pass"| SQL
-    SQL -->|"non-SELECT SQL detected"| Err2["403 SQL_BLOCKED"]
-    SQL -->|"pass"| Worker
-    Worker -->|"timeout"| Err3["408 EXECUTION_TIMEOUT"]
-    Worker -->|"runtime error"| Err4["422 RUNTIME_ERROR"]
-    Worker -->|"success"| Result
-```
+**Phase I — Static Semantic Validation (AST-based Policy Check):** Python's `ast` module parses the code statically and rejects any import of `os`, `sys`, `subprocess`, `socket`, `requests`, `pathlib`, or any call to `open()`, `eval()`, `exec()`, `compile()`, `__import__()`. This check runs before an execution subprocess is ever created.
 
-**Layer 1 — AST Guard:** Python's `ast` module parses the code statically and rejects any import of `os`, `sys`, `subprocess`, `socket`, `requests`, `pathlib`, or any call to `open()`, `eval()`, `exec()`, `compile()`, `__import__()`. This check runs before a subprocess is even created.
+**Phase II — Reactive SQL Filtering (Query Policy Enforcement):** The `read_sql()` helper available inside the sandbox inspects every SQL string for non-SELECT keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, etc.) before the query reaches the database driver.
 
-**Layer 2 — SQL Guard:** The `read_sql()` helper available inside the sandbox inspects every SQL string for non-SELECT keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, etc.) before execution.
-
-**Layer 3 — Subprocess Worker:** Code runs in a child process with a restricted namespace — no access to FastAPI's internal state, environment variables, or file system. Execution is killed after 30 seconds.
+**Phase III — Isolated Execution Sandbox (Sandboxed Subprocess):** Code runs in an isolated child process with a restricted namespace — no access to the application's internal state, environment variables, or file system. Execution is terminated after 30 seconds if the time limit is exceeded.
 
 ---
 
 ## 6. LLM Agent Design
 
-The agent implements a **ReAct-style** (Reason + Act) self-loop. It has access to three tools and must call `final_answer` to terminate the loop.
+The Agent Orchestrator implements a **ReAct-style** (Reason + Act) self-loop. It has access to three tool invocations and must issue a final synthesis response to terminate the loop.
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Agent as Agent Service
-    participant LLM as Qwen LLM
-    participant DB as MySQL (app_ro)
+![](/Users/berwin/Desktop/project/cw_web/InsightAgent/docs/image/3.png)
 
-    Client->>Agent: POST /analytics/analyze {question}
-    Agent->>LLM: system_prompt + question
-    LLM-->>Agent: tool_call: observe_schema
-    Agent->>DB: read schema
-    DB-->>Agent: tables, columns, FKs
-    Agent->>LLM: schema result
-    LLM-->>Agent: tool_call: run_python_analysis {code}
-    Agent->>DB: execute sandboxed code
-    DB-->>Agent: query results (stdout)
-    Agent->>LLM: stdout result
-    LLM-->>Agent: tool_call: final_answer {text}
-    Agent-->>Client: {answer, iterations, tool_trace, log_id}
-```
+**Key behaviours:**
 
-**Key agent behaviours:**
-- Always calls `observe_schema` first to understand available tables before writing any code
-- On error: reads the error message, fixes the code, and retries (up to 8 iterations total)
-- On the 7th iteration: the system prompt forces a `final_answer` call to prevent infinite loops
-- All iterations are persisted to `agent_turns` for auditability via `GET /analytics/logs/{id}/turns`
+- Always invokes `observe_schema` first to retrieve schema metadata before generating any analysis code
+- On execution fault: reads the error output, revises the code, and re-invokes the analysis tool (up to 8 iterations total)
+- On the 7th iteration: the system prompt forces a final synthesis call to prevent infinite loops
+- All iterations are persisted to `agent_turns` for full auditability via `GET /analytics/logs/{id}/turns`
 
 ---
 
@@ -197,22 +121,7 @@ sequenceDiagram
 
 The project includes **93 tests across 6 test files**, covering the full spectrum from unit-level validation to end-to-end LLM reasoning.
 
-```mermaid
-graph TD
-    Suite["Test Suite (93 tests)"]
-    T1["test_observe_schema\n10 tests\nSchema correctness, auth failures"]
-    T2["test_run_python_analysis\n20 tests\nValid execution, security blocks,\ntimeout, jailbreak"]
-    T3["test_saved_queries\n15 tests\nFull CRUD, 404, validation"]
-    T4["test_api_negative\n26 tests\nAuth, invalid params across\nall endpoints"]
-    T5["test_multistep_agent\n11 tests\nMulti-step reasoning,\nprompt injection safety"]
-    T6["test_anomaly_detection\n11 tests\nData anomaly discovery,\nAI Judge evaluation"]
-    Suite --> T1
-    Suite --> T2
-    Suite --> T3
-    Suite --> T4
-    Suite --> T5
-    Suite --> T6
-```
+![](/Users/berwin/Desktop/project/cw_web/InsightAgent/docs/image/4.png)
 
 ### Testing Philosophy
 
@@ -229,6 +138,7 @@ The testing strategy is structured around three principles:
 A key innovation in the testing approach is the **AI Judge**: for tests where the expected output is a natural language answer from the LLM agent (non-deterministic), a second Qwen LLM call evaluates the answer semantically rather than matching against a fixed string.
 
 The AI Judge receives:
+
 - The original question
 - The agent's final answer
 - The full turn-by-turn tool history (inputs and outputs)
@@ -246,20 +156,20 @@ To confirm reliability, the full LLM test suite (22 tests) was run 5 consecutive
 
 ## 8. Challenges and Lessons Learned
 
-| Challenge | Resolution |
-|-----------|------------|
-| **LLM non-determinism in tests** | Replaced brittle substring assertions with the AI Judge mechanism; tests now evaluate reasoning rather than exact wording |
-| **Agent stuck in empty-result loops** | Added guidance in the system prompt that an empty query result is itself a finding; on iteration 7 the system forces `final_answer` |
-| **SQL ambiguous column errors** | Fixed by aliasing columns in multi-table JOIN queries in the analytics service |
-| **LaTeX PDF generation failing on Unicode** | Switched from `pdflatex` to Chrome headless (`--print-to-pdf`) for reliable PDF export |
-| **Docker build network timeouts** | Configured registry mirror fallbacks in Docker daemon settings |
-| **Flaky LLM tests in CI** | Added `pytest-rerunfailures` with `reruns=1` on LLM-dependent tests |
+| Challenge                                   | Resolution                                                                                                                          |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **LLM non-determinism in tests**            | Replaced brittle substring assertions with the AI Judge mechanism; tests now evaluate reasoning rather than exact wording           |
+| **Agent stuck in empty-result loops**       | Added guidance in the system prompt that an empty query result is itself a finding; on iteration 7 the system forces `final_answer` |
+| **SQL ambiguous column errors**             | Fixed by aliasing columns in multi-table JOIN queries in the analytics service                                                      |
+| **LaTeX PDF generation failing on Unicode** | Switched from `pdflatex` to Chrome headless (`--print-to-pdf`) for reliable PDF export                                              |
+| **Docker build network timeouts**           | Configured registry mirror fallbacks in Docker daemon settings                                                                      |
+| **Flaky LLM tests in CI**                   | Added `pytest-rerunfailures` with `reruns=1` on LLM-dependent tests                                                                 |
 
 ### Lessons Learned
 
 **Testing non-deterministic systems requires a different mindset.** The initial approach of asserting exact substrings in agent answers produced a fragile test suite that failed randomly. Adopting the AI Judge pattern — effectively testing with the same class of tool that generates the output — proved far more robust. This is a transferable insight for any system that incorporates generative AI.
 
-**Security must be layered, not single-gated.** Early versions of the sandbox relied only on the AST guard. Penetration testing revealed that a user could craft a SQL `DROP TABLE` inside a `read_sql()` call that passed AST checks but caused real damage. Adding the SQL guard as a second layer closed this gap. The lesson is that each security layer should be designed with the assumption that all other layers may fail.
+**Security must be layered, not single-gated.** Early versions of the sandbox relied only on the Static Semantic Validation phase. Penetration testing revealed that a user could craft a SQL `DROP TABLE` inside a `read_sql()` call that passed the AST-based check but caused real damage. Adding the Reactive SQL Filtering phase as a second gate closed this gap. The lesson is that each security phase must be designed with the assumption that all other phases may fail.
 
 **Agent prompt engineering is an iterative process.** The first version of the system prompt produced agents that would repeatedly call `run_python_analysis` with the same broken code rather than adapting. Adding explicit instructions — *"if run_python_analysis returns an error, read it carefully and fix the code"* and the forced `final_answer` on iteration 7 — significantly improved completion rates.
 
@@ -288,17 +198,17 @@ To confirm reliability, the full LLM test suite (22 tests) was run 5 consecutive
 
 Three GenAI tools were used throughout this project:
 
-| Tool | Role | Usage |
-|------|------|-------|
-| **ChatGPT** | Ideation & Architecture | Brainstorming the project concept; designing the overall system architecture including the dual-account DB pattern, three-layer sandbox pipeline, and LLM agent self-loop strategy |
-| **Windsurf (Vibe Coding)** | Implementation & Testing | AI-assisted pair programming for all code — API routes, ORM models, agent service, sandboxed execution engine, 93-test suite, AI Judge mechanism, and documentation |
-| **Nano Banana** | Diagrams & Visuals | Architecture diagrams, workflow flowcharts, and visual illustrations for this report and the presentation slides |
+| Tool                       | Role                     | Usage                                                                                                                                                                              |
+| -------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ChatGPT**                | Ideation & Architecture  | Brainstorming the project concept; designing the overall system architecture including the dual-account DB pattern, three-layer sandbox pipeline, and LLM agent self-loop strategy |
+| **Windsurf (Vibe Coding)** | Implementation & Testing | AI-assisted pair programming for all code — API routes, ORM models, Agent Orchestrator, isolated execution engine, 93-test suite, AI Judge mechanism, and documentation           |
+| **Nano Banana**            | Diagrams & Visuals       | Architecture diagrams, workflow flowcharts, and visual illustrations for this report and the presentation slides                                                                   |
 
 ### Thoughtful Analysis of GenAI Usage
 
 **What GenAI did well.** Windsurf was exceptionally effective at generating repetitive but error-prone boilerplate — Pydantic schemas, SQLAlchemy models, pytest fixtures — where the pattern is clear but the volume would be tedious. ChatGPT accelerated the architectural design phase by surfacing trade-offs (e.g. single vs. dual DB accounts, subprocess vs. `RestrictedPython` for sandboxing) that would otherwise require hours of research.
 
-**Where human judgement remained essential.** GenAI consistently suggested the simplest solution, not necessarily the most secure one. The three-layer sandbox design — AST guard, SQL guard, subprocess isolation — emerged from recognising that the AI's initial single-guard proposal was insufficient. Similarly, the AI Judge testing approach was not suggested by any tool; it arose from reflecting on why the initial tests were failing.
+**Where human judgement remained essential.** GenAI consistently suggested the simplest solution, not necessarily the most secure one. The three-phase Security Policy Orchestration design — Static Semantic Validation, Reactive SQL Filtering, and Isolated Execution Sandbox — emerged from recognising that the AI's initial single-phase proposal was insufficient. Similarly, the AI Judge testing approach was not suggested by any tool; it arose from reflecting on why the initial tests were failing.
 
 **The most creative use: using GenAI to test GenAI.** The AI Judge mechanism — a second LLM call that evaluates the correctness of the first LLM's output — represents a novel application of GenAI in testing. Rather than fighting the non-determinism of LLM outputs with brittle string matching, this approach embraces it by delegating evaluation to a model capable of semantic reasoning. This pattern is increasingly used in production ML evaluation pipelines ("LLM-as-a-judge") and its application here to an automated test suite demonstrates high-level conceptual use of AI tools.
 
