@@ -200,13 +200,107 @@ Three GenAI tools were used throughout this project:
 
 | Tool                       | Role                     | Usage                                                                                                                                                                              |
 | -------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ChatGPT**                | Ideation & Architecture  | Brainstorming the project concept; designing the overall system architecture including the dual-account DB pattern, three-layer sandbox pipeline, and LLM agent self-loop strategy |
+| **ChatGPT**                | Ideation & Architecture  | Brainstorming the project concept; designing the overall system architecture including the dual-account DB pattern, three-phase security pipeline, and LLM agent self-loop strategy |
 | **Windsurf (Vibe Coding)** | Implementation & Testing | AI-assisted pair programming for all code — API routes, ORM models, Agent Orchestrator, isolated execution engine, 93-test suite, AI Judge mechanism, and documentation           |
-| **Nano Banana**            | Diagrams & Visuals       | Architecture diagrams, workflow flowcharts, and visual illustrations for this report and the presentation slides                                                                   |
+| **Nano Banana**            | Diagrams & Visuals       | Generating IEEE/ACM-style architecture diagrams, security pipeline flowcharts, agent sequence diagrams, and test suite structure diagrams for this report                          |
+
+### Example Prompts and Interactions
+
+#### ChatGPT — Architecture Design
+
+> **Prompt:** "I'm building a FastAPI web API that exposes a classical sales dataset and includes a natural language analysis feature using an LLM. I need to design a security model for executing LLM-generated Python code safely. What approaches exist and what are the trade-offs?"
+>
+> **Outcome:** ChatGPT surfaced three candidate approaches — `RestrictedPython`, `exec()` with a filtered namespace, and subprocess isolation — and explained the trade-offs of each. This led to the decision to use a subprocess combined with AST-based static analysis, which became the foundation of the three-phase Security Policy Orchestration design.
+
+> **Prompt:** "Should I use one database user or separate read-only and read-write accounts? What does defence-in-depth mean in this context?"
+>
+> **Outcome:** ChatGPT explained that even if application-level guards are bypassed, a read-only database account acts as a hard enforcement layer at the infrastructure level. This directly motivated the `app_rw` / `app_ro` dual-account design.
+
+#### Windsurf (Vibe Coding) — Implementation
+
+Windsurf was used as an AI pair programmer throughout the implementation phase. Representative interactions include:
+
+> **Instruction:** "Implement a sandboxed Python execution endpoint that runs user code in an isolated subprocess with a 30-second timeout, restricts available builtins, and returns structured JSON with stdout, error type, and a data_found flag."
+>
+> **Outcome:** Windsurf generated the initial `python_worker.py` and `run_python_analysis.py` implementations. The generated code was reviewed, security-tested against jailbreak inputs, and iteratively refined over multiple sessions.
+
+> **Instruction:** "Write a pytest test suite for the run_python_analysis endpoint covering: successful execution, AST security violations, SQL policy breaches, timeout behaviour, syntax errors, runtime errors, and prompt injection attempts."
+>
+> **Outcome:** Windsurf generated 20 test cases covering all specified scenarios. Edge cases identified during review (e.g. nested import bypass, multi-statement SQL injection) were manually added.
+
+#### Nano Banana — Diagram Generation
+
+Nano Banana was used to generate all four technical diagrams in this report using carefully engineered prompts. The following is the prompt used to generate the system architecture diagram (Figure 1):
+
+> **Prompt:**
+> ```
+> Task: Generate a professional system architecture diagram for a computer science
+> academic journal (IEEE/ACM style).
+>
+> Core Aesthetic:
+> - Style: Minimalist flat vector illustration, scientific technical drawing.
+> - Color Scheme: Professional grayscale with muted accent colors (e.g., slate blue
+>   or sage green) to distinguish different layers. No gradients, no shadows, no emojis.
+> - Background: Pure white background for high contrast.
+>
+> Layout & Structure:
+> - Direction: Top-to-bottom flow.
+> - Hierarchy: Clear separation between "External Environment", "Application Layer",
+>   and "Data Layer" using clean, thin-lined bounding boxes (subgraphs).
+> - Typography: Use a clean sans-serif font (like Arial or Helvetica). All text labels
+>   must be perfectly legible and correctly spelled.
+>
+> Functional Blueprint (Follow this logic strictly):
+>
+> graph TD
+>     Client["Client Applications"]
+>     subgraph External["External Environment"]
+>         LLM["Large Language Model API"]
+>     end
+>     subgraph CoreSystem["Core System Architecture"]
+>         Auth["API Gateway & Authentication"]
+>         subgraph ApplicationLayer["Application Layer"]
+>             Router["Request Router"]
+>             Agent["Agent Orchestrator"]
+>             Analytics["Analytics Engine"]
+>             subgraph Sandbox["Isolated Execution Environment"]
+>                 AST["AST Validator"]
+>                 SQL["SQL Policy Enforcer"]
+>                 Worker["Execution Subprocess"]
+>             end
+>         end
+>         subgraph DataLayer["Data Layer"]
+>             RW_Access["Write-Enabled Interface"]
+>             RO_Access["Read-Only Interface"]
+>             DB["Relational Database"]
+>         end
+>     end
+>     Client --> Auth
+>     Auth --> Router
+>     Router --> Agent
+>     Router --> Analytics
+>     Router --> Sandbox
+>     Agent <--> LLM
+>     Agent --> Sandbox
+>     Sandbox --> AST --> SQL --> Worker
+>     Worker --> RO_Access
+>     Analytics --> RO_Access
+>     Router --> RW_Access
+>     RW_Access --- DB
+>     RO_Access --- DB
+>
+> Technical Details:
+> - Lines must be sharp, straight, and orthogonal (90-degree angles).
+> - Arrows should be clean and consistent.
+> - Ensure high-density details with 8k resolution and precise alignment.
+> - Final image must look like a professional LaTeX-rendered or TikZ-generated diagram.
+> ```
+>
+> **Outcome:** Figure 1 (System Architecture Diagram) was generated from this prompt and used directly in Section 3 of this report. Similar structured prompts were used for Figures 2–4.
 
 ### Thoughtful Analysis of GenAI Usage
 
-**What GenAI did well.** Windsurf was exceptionally effective at generating repetitive but error-prone boilerplate — Pydantic schemas, SQLAlchemy models, pytest fixtures — where the pattern is clear but the volume would be tedious. ChatGPT accelerated the architectural design phase by surfacing trade-offs (e.g. single vs. dual DB accounts, subprocess vs. `RestrictedPython` for sandboxing) that would otherwise require hours of research.
+**What GenAI did well.** Windsurf was exceptionally effective at generating repetitive but error-prone boilerplate — Pydantic schemas, SQLAlchemy models, pytest fixtures — where the pattern is clear but the volume would be tedious. ChatGPT accelerated the architectural design phase by surfacing trade-offs (e.g. single vs. dual DB accounts, subprocess vs. `RestrictedPython` for sandboxing) that would otherwise require hours of research. Nano Banana produced publication-quality diagrams from structured natural language prompts, eliminating the need for manual diagram tooling.
 
 **Where human judgement remained essential.** GenAI consistently suggested the simplest solution, not necessarily the most secure one. The three-phase Security Policy Orchestration design — Static Semantic Validation, Reactive SQL Filtering, and Isolated Execution Sandbox — emerged from recognising that the AI's initial single-phase proposal was insufficient. Similarly, the AI Judge testing approach was not suggested by any tool; it arose from reflecting on why the initial tests were failing.
 
@@ -214,4 +308,4 @@ Three GenAI tools were used throughout this project:
 
 **Impact on development velocity.** Approximately 70% of the codebase was written or significantly shaped by Windsurf. However, every generated code block was tested against real data, reviewed for security implications, and in many cases substantially modified. The AI provided a starting point; the correctness and robustness of the final system required consistent human oversight.
 
-Exported conversation logs from ChatGPT and Windsurf are attached as supplementary material.
+Exported conversation logs from all three tools are attached as supplementary material.
