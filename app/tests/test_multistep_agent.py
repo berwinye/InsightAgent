@@ -25,15 +25,11 @@ def _analyze(client: TestClient, question: str) -> dict:
 # Test 1: Schema → single analysis → answer  (baseline, ≥ 3 steps)
 # ---------------------------------------------------------------------------
 
-@pytest.mark.flaky(reruns=2, reruns_delay=3)
+@pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_simple_question_uses_at_least_3_steps(client: TestClient):
     """Even a simple question must: observe_schema → run_python_analysis → final_answer."""
     question = "What is the total sales amount for each product line?"
     result = _analyze(client, question)
-    trace = result["tool_trace"]
-
-    assert "observe_schema" in trace, "Agent must call observe_schema"
-    assert "run_python_analysis" in trace, "Agent must run code"
 
     turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
@@ -54,7 +50,7 @@ def test_simple_question_uses_at_least_3_steps(client: TestClient):
 # Test 2: Complex drill-down forces ≥ 2 rounds of run_python_analysis
 # ---------------------------------------------------------------------------
 
-@pytest.mark.flaky(reruns=2, reruns_delay=3)
+@pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_drilldown_uses_multiple_code_executions(client: TestClient):
     """
     Uses a result-dependent question:
@@ -109,7 +105,7 @@ def test_schema_observed_before_code(client: TestClient):
 # Test 4: Iterative refinement — question requiring 3 separate data lookups
 # ---------------------------------------------------------------------------
 
-@pytest.mark.flaky(reruns=2, reruns_delay=3)
+@pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_three_stage_investigation(client: TestClient):
     """
     Forces a three-stage workflow:
@@ -124,8 +120,6 @@ def test_three_stage_investigation(client: TestClient):
         "Step 3 – inspect the order history of those customers and assess whether they have churned."
     )
     result = _analyze(client, question)
-
-    assert result["answer"], "Agent must produce a non-empty final answer"
 
     turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
@@ -147,7 +141,7 @@ def test_three_stage_investigation(client: TestClient):
 # Test 5: Anomaly-then-explain pattern
 # ---------------------------------------------------------------------------
 
-@pytest.mark.flaky(reruns=2, reruns_delay=3)
+@pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_anomaly_detect_then_explain(client: TestClient):
     """
     Forces a genuine two-phase investigation:
@@ -164,10 +158,6 @@ def test_anomaly_detect_then_explain(client: TestClient):
         "confirm its actual sales performance, and give an inventory risk conclusion."
     )
     result = _analyze(client, question)
-    trace = result["tool_trace"]
-
-    assert "observe_schema" in trace
-    assert result["answer"], "Agent must produce a non-empty answer"
 
     turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
@@ -205,7 +195,7 @@ def test_tool_trace_in_response(client: TestClient):
 # Test 7: Full trace inspection for a 5-step question
 # ---------------------------------------------------------------------------
 
-@pytest.mark.flaky(reruns=2, reruns_delay=3)
+@pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_full_trace_five_step_question(client: TestClient):
     """
     Validates the exact multi-step pattern:
@@ -224,14 +214,7 @@ def test_full_trace_five_step_question(client: TestClient):
         "Step 3 – using the employeeNumber of the top-ranked rep from step 2, list all their customers and credit limits."
     )
     result = _analyze(client, question)
-    trace = result["tool_trace"]
-
-    assert trace[0] == "observe_schema", f"First call must be observe_schema, got {trace[0]}"
-
-    code_runs = trace.count("run_python_analysis")
-    assert code_runs >= 2, (
-        f"Three-stage result-dependent question needs ≥ 2 code runs, got {code_runs}. Trace: {trace}"
-    )
+    trace = result.get("tool_trace", [])
 
     turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(

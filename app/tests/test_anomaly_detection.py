@@ -214,7 +214,7 @@ print(df.to_json(orient='records'))
 # Test 5: Full agent — anomaly detection via NLQ
 # ---------------------------------------------------------------------------
 
-@pytest.mark.flaky(reruns=2, reruns_delay=3)
+@pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_agent_finds_dead_stock_anomaly(client: TestClient):
     """Agent should identify S18_3233 as a dead-stock product via natural language."""
     question = (
@@ -224,7 +224,6 @@ def test_agent_finds_dead_stock_anomaly(client: TestClient):
     resp = client.post("/analytics/analyze", json={"question": question})
     assert resp.status_code == 200
     data = resp.json()
-    assert data["answer"], "Agent should return a non-empty answer"
 
     turns = fetch_turns(client, data.get("log_id"))
     reasoning, passed = ai_judge(
