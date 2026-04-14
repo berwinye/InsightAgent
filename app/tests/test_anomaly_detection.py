@@ -10,6 +10,7 @@ Confirmed anomalies found in the dataset:
 import json
 import pytest
 from fastapi.testclient import TestClient
+from app.tests.ai_judge import ai_judge
 
 
 # ---------------------------------------------------------------------------
@@ -215,17 +216,28 @@ print(df.to_json(orient='records'))
 
 def test_agent_finds_dead_stock_anomaly(client: TestClient):
     """Agent should identify S18_3233 as a dead-stock product via natural language."""
-    resp = client.post(
-        "/analytics/analyze",
-        json={"question": "Find the product with the highest stock quantity that has never had any sales orders. List its product code, name, and stock quantity."},
+    question = (
+        "Find the product with the highest stock quantity that has never had any sales orders. "
+        "List its product code, name, and stock quantity."
     )
+    resp = client.post("/analytics/analyze", json={"question": question})
     assert resp.status_code == 200
     data = resp.json()
     assert data["answer"], "Agent should return a non-empty answer"
-    assert data["iterations"] >= 1
-    assert "S18_3233" in data["answer"] or "Toyota Supra" in data["answer"], (
-        f"Agent should mention S18_3233 / Toyota Supra. Got: {data['answer'][:300]}"
+
+    reasoning, passed = ai_judge(
+        question=question,
+        result=data,
+        criteria=(
+            "The agent must have queried the database and identified the product with the "
+            "highest stock that has never been ordered. The correct answer is product S18_3233 "
+            "(1985 Toyota Supra) with approximately 7,733 units in stock. "
+            "The answer should mention the product code (S18_3233) or the product name "
+            "(Toyota Supra or 1985 Toyota Supra) and a stock quantity above 7,000."
+        ),
     )
+    print(f"\n  AI Judge reasoning: {reasoning}")
+    assert passed, f"AI Judge ruled No:\n{reasoning}"
 
 
 def test_agent_anomaly_report_is_saved(client: TestClient):
