@@ -157,9 +157,9 @@ FastAPI returns a structured list of all validation failures. Examples:
 
 `/skills/run_python_analysis` returns HTTP `200` only on success. All error cases use standard HTTP status codes, with the error detail in `{"detail": {...}}`:
 
-| HTTP | `error_type`         | `status`  | Meaning                                       |
-| ---- | -------------------- | --------- | --------------------------------------------- |
-| `200` | —                   | `success` | Code executed successfully                    |
+| HTTP  | `error_type`         | `status`  | Meaning                                       |
+| ----- | -------------------- | --------- | --------------------------------------------- |
+| `200` | —                    | `success` | Code executed successfully                    |
 | `403` | `SECURITY_VIOLATION` | `blocked` | AST guard rejected a forbidden import or call |
 | `403` | `SQL_BLOCKED`        | `failed`  | SQL contained a non-SELECT statement          |
 | `408` | `EXECUTION_TIMEOUT`  | `failed`  | Code exceeded the 30-second timeout           |
