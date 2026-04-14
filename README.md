@@ -43,13 +43,13 @@ An enterprise sales data Web API system built with **FastAPI + MySQL 8 + Docker*
 ## API Documentation
 
 | Format | Location |
-|--------|---------|
+|--------|----------|
+| **Full API Reference (PDF)** | [`docs/API.pdf`](docs/API.pdf) |
 | **Full API Reference (Markdown)** | [`docs/API.md`](docs/API.md) |
 | **Interactive Swagger UI** | `http://localhost:8000/docs` (requires running stack) |
 | **OpenAPI JSON** | `http://localhost:8000/openapi.json` |
 
-`docs/API.md` covers every endpoint, all parameters, example requests/responses, authentication flow, and error codes.  
-To export as PDF: open `docs/API.md` in a Markdown viewer (e.g. VS Code → *Export PDF*, or Pandoc: `pandoc docs/API.md -o docs/API.pdf`).
+`docs/API.pdf` / `docs/API.md` covers every endpoint, all parameters, example requests/responses, authentication flow, and error codes.
 
 ---
 
@@ -90,9 +90,13 @@ InsightAgent/
     │       └── result_serializer.py
     └── tests/
         ├── conftest.py
+        ├── ai_judge.py            ← LLM-based semantic test evaluator
         ├── test_observe_schema.py
         ├── test_run_python_analysis.py
-        └── test_saved_queries.py
+        ├── test_saved_queries.py
+        ├── test_api_negative.py   ← auth & validation failure tests
+        ├── test_multistep_agent.py ← multi-step LLM agent + jailbreak tests
+        └── test_anomaly_detection.py ← data anomaly detection tests
 ```
 
 ---
@@ -122,6 +126,9 @@ MYSQL_APP_RO_USER=app_ro
 MYSQL_APP_RO_PASSWORD=ro_password123
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
+
+# API Authentication (leave empty to disable auth)
+API_KEY=insightagent-secret-key
 
 QWEN_API_KEY=sk-your-api-key-here
 QWEN_MODEL=qwen-plus
@@ -191,6 +198,8 @@ curl http://localhost:8000/health
 | GET | `/analytics/employee-performance` | Sales KPIs per employee |
 | GET | `/analytics/sales-trend` | Monthly revenue trend (optional `?year=2004`) |
 | POST | `/analytics/analyze` | Natural language analysis (Qwen agent) |
+| GET | `/analytics/logs` | List past analysis run logs |
+| GET | `/analytics/logs/{log_id}/turns` | Per-turn LLM details for an analysis run |
 
 ### Skills
 
@@ -311,6 +320,7 @@ User question
 
 ```bash
 curl -X POST http://localhost:8000/analytics/analyze \
+  -H "X-API-Key: insightagent-secret-key" \
   -H "Content-Type: application/json" \
   -d '{"question": "Which product line generated the most revenue?"}'
 ```
@@ -321,7 +331,9 @@ Response:
   "answer": "Classic Cars generated the most revenue at $3,853,438.94...",
   "iterations": 3,
   "generated_code": "import pandas as pd\n...",
-  "saved_query_id": 1
+  "saved_query_id": 1,
+  "log_id": 5,
+  "tool_trace": ["observe_schema", "run_python_analysis", "final_answer"]
 }
 ```
 
