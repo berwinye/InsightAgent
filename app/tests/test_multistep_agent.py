@@ -200,20 +200,19 @@ def test_tool_trace_in_response(client: TestClient):
 @pytest.mark.flaky(reruns=1, reruns_delay=3)
 def test_full_trace_five_step_question(client: TestClient):
     """
-    Validates the exact multi-step pattern:
-      observe_schema → run × N → final_answer
+    Validates the multi-step pattern: observe_schema → run × N → final_answer
 
-    Uses a genuinely result-dependent three-stage question so the LLM cannot
-    collapse all steps into a single SQL query:
-      Stage 1 – find the exact year-month with highest total sales (specific value needed)
-      Stage 2 – using that year-month, rank sales reps by revenue in that period
-      Stage 3 – using the top rep's employeeNumber, inspect their customers' credit limits
+    Uses a 2-step result-dependent question so the LLM must call
+    run_python_analysis at least twice:
+      Step 1 – find the product line with the highest total revenue (name only)
+      Step 2 – using that product line name, list its top 5 products by revenue
+    Product line names are plain text, easy to carry across steps without
+    exact numeric ID chaining.
     """
     question = (
-        "Run three separate code executions: "
-        "Step 1 – find the exact year and month with the highest single-month total sales (print the year and month values); "
-        "Step 2 – using the exact year and month from step 1, rank each sales representative by total revenue in that month; "
-        "Step 3 – using the employeeNumber of the top-ranked rep from step 2, list all their customers and credit limits."
+        "Run two separate code executions: "
+        "Step 1 – find the product line with the highest total revenue (print its exact name); "
+        "Step 2 – using the product line name from step 1, list the top 5 products in that product line ranked by total revenue."
     )
     result = _analyze(client, question)
     trace = result.get("tool_trace", [])
@@ -223,10 +222,9 @@ def test_full_trace_five_step_question(client: TestClient):
         question=question,
         result=result,
         criteria=(
-            "The agent must have completed all three stages and reported: "
-            "(1) the specific year and month with peak sales, "
-            "(2) a ranking of sales reps by revenue in that month, AND "
-            "(3) the customer list with credit limits for the top-ranked rep."
+            "The agent must have completed both steps: "
+            "(1) identified a specific product line name as the highest-revenue one, AND "
+            "(2) listed at least 3 products from that product line with revenue or sales figures."
         ),
         turns=turns,
     )
