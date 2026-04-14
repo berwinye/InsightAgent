@@ -195,39 +195,39 @@ def analyze_question(question: str, db: Optional[Session] = None) -> dict[str, A
                 tool_choice=tool_choice,
             )
         except APIConnectionError as exc:
-            final_ans = f"LLM 错误: 网络连接失败。请检查网络设置。详情: {exc}"
+            final_ans = f"LLM error: Network connection failed. Check network settings. Detail: {exc}"
             logger.error("LLM APIConnectionError: %s", exc)
             break
         except APITimeoutError as exc:
-            final_ans = f"LLM 错误: 请求超时。详情: {exc}"
+            final_ans = f"LLM error: Request timed out. Detail: {exc}"
             logger.error("LLM APITimeoutError: %s", exc)
             break
         except RateLimitError as exc:
-            final_ans = f"LLM 错误: 请求频率超限 (429)。详情: {exc}"
+            final_ans = f"LLM error: Rate limit exceeded (429). Detail: {exc}"
             logger.error("LLM RateLimitError: %s", exc)
             break
         except AuthenticationError as exc:
-            final_ans = f"LLM 错误: 认证失败，请检查 QWEN_API_KEY 配置。详情: {exc}"
+            final_ans = f"LLM error: Authentication failed. Check QWEN_API_KEY. Detail: {exc}"
             logger.error("LLM AuthenticationError: %s", exc)
             break
         except BadRequestError as exc:
-            final_ans = f"LLM 错误: 请求无效 (400)，可能是上下文过长。详情: {exc}"
+            final_ans = f"LLM error: Bad request (400), possibly context too long. Detail: {exc}"
             logger.error("LLM BadRequestError: %s", exc)
             break
         except InternalServerError as exc:
-            final_ans = f"LLM 错误: LLM 服务内部错误 (500)。详情: {exc}"
+            final_ans = f"LLM error: LLM service internal error (500). Detail: {exc}"
             logger.error("LLM InternalServerError: %s", exc)
             break
         except APIStatusError as exc:
-            final_ans = f"LLM 错误: API 返回 HTTP {exc.status_code}。详情: {exc.message}"
+            final_ans = f"LLM error: API returned HTTP {exc.status_code}. Detail: {exc.message}"
             logger.error("LLM APIStatusError %s: %s", exc.status_code, exc.message)
             break
         except APIError as exc:
-            final_ans = f"LLM 错误: {exc}"
+            final_ans = f"LLM error: {exc}"
             logger.error("LLM APIError: %s", exc)
             break
         except Exception as exc:
-            final_ans = f"未知错误: {type(exc).__name__}: {exc}"
+            final_ans = f"Unknown error: {type(exc).__name__}: {exc}"
             logger.error("Unexpected error during LLM call: %s", exc, exc_info=True)
             break
 
