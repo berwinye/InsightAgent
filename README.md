@@ -388,15 +388,14 @@ docker compose down -v     # stop containers AND remove data
 
 ## GenAI Usage Declaration
 
-This project was developed with the assistance of **Windsurf (Cascade)** — an AI coding assistant. GenAI was used for:
+This project was developed with the assistance of three GenAI tools, each serving a distinct role:
 
-| Purpose | Detail |
-|---------|--------|
-| Architecture design | Discussing dual-account DB design, sandbox layering, agent self-loop pattern |
-| Implementation | Generating boilerplate, fixing SQL ambiguity bugs, refining error handling |
-| Test strategy | Designing the AI Judge mechanism, identifying edge cases (jailbreak, timeout, empty-result) |
-| Documentation | Drafting API reference, reviewing completeness against assignment requirements |
+| Tool | Role | Specific Usage |
+|------|------|----------------|
+| **ChatGPT** | Ideation & Architecture | Brainstorming the overall project concept; designing the system and technical architecture including the dual-account DB pattern, three-layer sandbox pipeline, and LLM agent self-loop strategy |
+| **Windsurf (Vibe Coding)** | Implementation & Testing | End-to-end code writing via AI-assisted pair programming — API routes, ORM models, agent service, sandboxed execution engine, full test suite (93 tests), AI Judge mechanism, and documentation |
+| **Nano Banana** | Diagrams & Visuals | Creating architecture diagrams, workflow flowcharts, and visual illustrations used in the Technical Report and presentation slides |
 
-All AI-generated code was reviewed, tested, and refined. The architectural decisions (LLM agent integration, three-layer security pipeline, AI-driven test evaluation) were independently conceived and are justified in the Technical Report.
+All AI-generated output was critically reviewed, tested against real data, and refined. Core architectural decisions were independently justified; the AI accelerated execution rather than replacing engineering judgement.
 
-Exported conversation logs are included as supplementary material per module requirements.
+Exported conversation logs from ChatGPT and Windsurf are attached as supplementary material per module requirements.
