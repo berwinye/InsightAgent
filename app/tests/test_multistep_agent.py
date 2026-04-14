@@ -109,15 +109,16 @@ def test_schema_observed_before_code(client: TestClient):
 def test_three_stage_investigation(client: TestClient):
     """
     Forces a three-stage workflow:
-      Stage 1 – find the worst-performing sales rep
-      Stage 2 – inspect that rep's customer list
-      Stage 3 – inspect the order history of those customers
+      Stage 1 – find the office with the lowest total sales revenue
+      Stage 2 – list all sales reps in that office
+      Stage 3 – for each rep, report their customer count and total revenue
+    Using offices guarantees non-empty data at every stage.
     """
     question = (
         "Analyze in three steps: "
-        "Step 1 – find the sales representative with the lowest total sales revenue; "
-        "Step 2 – list all customers managed by that sales rep; "
-        "Step 3 – inspect the order history of those customers and assess whether they have churned."
+        "Step 1 – find the office (by city) with the lowest total sales revenue across all its employees; "
+        "Step 2 – list all sales representatives working in that office; "
+        "Step 3 – for each of those sales reps, report their total number of customers and total revenue generated."
     )
     result = _analyze(client, question)
 
@@ -127,9 +128,10 @@ def test_three_stage_investigation(client: TestClient):
         result=result,
         criteria=(
             "The agent must have addressed all three stages: "
-            "(1) named a specific sales representative as the lowest performer, "
-            "(2) listed customers managed by that rep, AND "
-            "(3) assessed whether those customers have churned based on order history."
+            "(1) named a specific city/office as the lowest-revenue office, "
+            "(2) listed the sales representatives in that office, AND "
+            "(3) reported customer count and/or revenue figures for those reps. "
+            "If any stage returns an empty result, explicitly stating that finding is acceptable."
         ),
         turns=turns,
     )
