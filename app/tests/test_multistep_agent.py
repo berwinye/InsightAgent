@@ -8,7 +8,7 @@ A single-step or two-step response would fail the iteration and tool-count asser
 """
 import pytest
 from fastapi.testclient import TestClient
-from app.tests.ai_judge import ai_judge
+from app.tests.ai_judge import ai_judge, fetch_turns
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +35,7 @@ def test_simple_question_uses_at_least_3_steps(client: TestClient):
     assert "observe_schema" in trace, "Agent must call observe_schema"
     assert "run_python_analysis" in trace, "Agent must run code"
 
+    turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
         question=question,
         result=result,
@@ -43,6 +44,7 @@ def test_simple_question_uses_at_least_3_steps(client: TestClient):
             "specific total revenue or sales figures for each product line "
             "(e.g. Classic Cars, Vintage Cars, Motorcycles, etc.)."
         ),
+        turns=turns,
     )
     print(f"\n  AI Judge reasoning: {reasoning}")
     assert passed, f"AI Judge ruled No:\n{reasoning}"
@@ -75,6 +77,7 @@ def test_drilldown_uses_multiple_code_executions(client: TestClient):
         f"got {code_runs}. Trace: {trace}"
     )
 
+    turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
         question=question,
         result=result,
@@ -83,6 +86,7 @@ def test_drilldown_uses_multiple_code_executions(client: TestClient):
             "(1) identified a specific product code as the best-seller, AND "
             "(2) reported the annual sales quantity and/or revenue trend for that product across multiple years."
         ),
+        turns=turns,
     )
     print(f"\n  AI Judge reasoning: {reasoning}")
     assert passed, f"AI Judge ruled No:\n{reasoning}"
@@ -130,6 +134,7 @@ def test_three_stage_investigation(client: TestClient):
 
     assert result["answer"], "Agent must produce a non-empty final answer"
 
+    turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
         question=question,
         result=result,
@@ -139,6 +144,7 @@ def test_three_stage_investigation(client: TestClient):
             "(2) listed customers managed by that rep, AND "
             "(3) assessed whether those customers have churned based on order history."
         ),
+        turns=turns,
     )
     print(f"\n  AI Judge reasoning: {reasoning}")
     assert passed, f"AI Judge ruled No:\n{reasoning}"
@@ -170,6 +176,7 @@ def test_anomaly_detect_then_explain(client: TestClient):
     assert "observe_schema" in trace
     assert result["answer"], "Agent must produce a non-empty answer"
 
+    turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
         question=question,
         result=result,
@@ -178,6 +185,7 @@ def test_anomaly_detect_then_explain(client: TestClient):
             "(1) identified a specific product code as the most overstocked (highest stock-to-sales ratio), AND "
             "(2) provided an inventory risk conclusion for that product based on its actual order history."
         ),
+        turns=turns,
     )
     print(f"\n  AI Judge reasoning: {reasoning}")
     assert passed, f"AI Judge ruled No:\n{reasoning}"
@@ -232,6 +240,7 @@ def test_full_trace_five_step_question(client: TestClient):
         f"Three-stage result-dependent question needs ≥ 2 code runs, got {code_runs}. Trace: {trace}"
     )
 
+    turns = fetch_turns(client, result.get("log_id"))
     reasoning, passed = ai_judge(
         question=question,
         result=result,
@@ -241,6 +250,7 @@ def test_full_trace_five_step_question(client: TestClient):
             "(2) a ranking of sales reps by revenue in that month, AND "
             "(3) the customer list with credit limits for the top-ranked rep."
         ),
+        turns=turns,
     )
     print(f"\n  Tool trace ({len(trace)} calls): {' → '.join(trace)}")
     print(f"  Iterations: {result['iterations']}")

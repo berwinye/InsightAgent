@@ -14,7 +14,17 @@ import json
 import logging
 from typing import Any, Optional
 
-from openai import OpenAI
+from openai import (
+    OpenAI,
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+    AuthenticationError,
+    BadRequestError,
+    InternalServerError,
+    APIStatusError,
+    APIError,
+)
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -47,8 +57,7 @@ Strategy:
 - Always call observe_schema first to understand available tables.
 - Write clean, focused Python code that uses read_sql() and prints the result.
 - If run_python_analysis returns an error, read it carefully, fix the code, and retry.
-- If a query returns an empty result, that IS your finding — state it clearly and call final_answer.
-- Do not keep re-querying after getting empty results; summarise what was found and conclude.
+- If run_python_analysis returns data_found=false, the query succeeded with 0 rows — state that as your finding and call final_answer.
 - When the analysis is complete and you have a clear answer, call final_answer.
 - You MUST call final_answer within {max_iter} iterations.
 - Do not invent data; derive all figures from query results.
@@ -178,12 +187,49 @@ def analyze_question(question: str, db: Optional[Session] = None) -> dict[str, A
         if force_final:
             logger.info("Forcing final_answer on iteration %d", iteration)
 
-        response = client.chat.completions.create(
-            model=settings.QWEN_MODEL,
-            messages=messages,
-            tools=TOOLS,
-            tool_choice=tool_choice,
-        )
+        try:
+            response = client.chat.completions.create(
+                model=settings.QWEN_MODEL,
+                messages=messages,
+                tools=TOOLS,
+                tool_choice=tool_choice,
+            )
+        except APIConnectionError as exc:
+            final_ans = f"LLM 错误: 网络连接失败。请检查网络设置。详情: {exc}"
+            logger.error("LLM APIConnectionError: %s", exc)
+            break
+        except APITimeoutError as exc:
+            final_ans = f"LLM 错误: 请求超时。详情: {exc}"
+            logger.error("LLM APITimeoutError: %s", exc)
+            break
+        except RateLimitError as exc:
+            final_ans = f"LLM 错误: 请求频率超限 (429)。详情: {exc}"
+            logger.error("LLM RateLimitError: %s", exc)
+            break
+        except AuthenticationError as exc:
+            final_ans = f"LLM 错误: 认证失败，请检查 QWEN_API_KEY 配置。详情: {exc}"
+            logger.error("LLM AuthenticationError: %s", exc)
+            break
+        except BadRequestError as exc:
+            final_ans = f"LLM 错误: 请求无效 (400)，可能是上下文过长。详情: {exc}"
+            logger.error("LLM BadRequestError: %s", exc)
+            break
+        except InternalServerError as exc:
+            final_ans = f"LLM 错误: LLM 服务内部错误 (500)。详情: {exc}"
+            logger.error("LLM InternalServerError: %s", exc)
+            break
+        except APIStatusError as exc:
+            final_ans = f"LLM 错误: API 返回 HTTP {exc.status_code}。详情: {exc.message}"
+            logger.error("LLM APIStatusError %s: %s", exc.status_code, exc.message)
+            break
+        except APIError as exc:
+            final_ans = f"LLM 错误: {exc}"
+            logger.error("LLM APIError: %s", exc)
+            break
+        except Exception as exc:
+            final_ans = f"未知错误: {type(exc).__name__}: {exc}"
+            logger.error("Unexpected error during LLM call: %s", exc, exc_info=True)
+            break
 
         message = response.choices[0].message
         llm_content = message.content

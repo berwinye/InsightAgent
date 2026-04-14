@@ -156,11 +156,18 @@ def main() -> None:
         sys.stdout = old_stdout
         captured = stdout_capture.getvalue()
         lines = [l for l in captured.splitlines() if l]
-        result = {
+        result: dict = {
             "status": "success",
+            "data_found": len(lines) > 0,
             "stdout": captured,
             "summary": {"line_count": len(lines)},
         }
+        if len(lines) == 0:
+            result["note"] = (
+                "Code executed successfully with no printed output. "
+                "This means the query returned 0 rows — a valid finding "
+                "confirming the absence of matching data."
+            )
     except _SqlBlocked as exc:
         sys.stdout = old_stdout
         result = {

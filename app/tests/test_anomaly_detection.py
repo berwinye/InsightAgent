@@ -10,7 +10,7 @@ Confirmed anomalies found in the dataset:
 import json
 import pytest
 from fastapi.testclient import TestClient
-from app.tests.ai_judge import ai_judge
+from app.tests.ai_judge import ai_judge, fetch_turns
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +226,7 @@ def test_agent_finds_dead_stock_anomaly(client: TestClient):
     data = resp.json()
     assert data["answer"], "Agent should return a non-empty answer"
 
+    turns = fetch_turns(client, data.get("log_id"))
     reasoning, passed = ai_judge(
         question=question,
         result=data,
@@ -236,6 +237,7 @@ def test_agent_finds_dead_stock_anomaly(client: TestClient):
             "The answer should mention the product code (S18_3233) or the product name "
             "(Toyota Supra or 1985 Toyota Supra) and a stock quantity above 7,000."
         ),
+        turns=turns,
     )
     print(f"\n  AI Judge reasoning: {reasoning}")
     assert passed, f"AI Judge ruled No:\n{reasoning}"
