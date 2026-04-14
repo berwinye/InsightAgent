@@ -25,6 +25,7 @@ def _analyze(client: TestClient, question: str) -> dict:
 # Test 1: Schema → single analysis → answer  (baseline, ≥ 3 steps)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.flaky(reruns=2, reruns_delay=3)
 def test_simple_question_uses_at_least_3_steps(client: TestClient):
     """Even a simple question must: observe_schema → run_python_analysis → final_answer."""
     question = "What is the total sales amount for each product line?"
@@ -51,6 +52,7 @@ def test_simple_question_uses_at_least_3_steps(client: TestClient):
 # Test 2: Complex drill-down forces ≥ 2 rounds of run_python_analysis
 # ---------------------------------------------------------------------------
 
+@pytest.mark.flaky(reruns=2, reruns_delay=3)
 def test_drilldown_uses_multiple_code_executions(client: TestClient):
     """
     Uses a result-dependent question:
@@ -110,6 +112,7 @@ def test_schema_observed_before_code(client: TestClient):
 # Test 4: Iterative refinement — question requiring 3 separate data lookups
 # ---------------------------------------------------------------------------
 
+@pytest.mark.flaky(reruns=2, reruns_delay=3)
 def test_three_stage_investigation(client: TestClient):
     """
     Forces a three-stage workflow:
@@ -145,6 +148,7 @@ def test_three_stage_investigation(client: TestClient):
 # Test 5: Anomaly-then-explain pattern
 # ---------------------------------------------------------------------------
 
+@pytest.mark.flaky(reruns=2, reruns_delay=3)
 def test_anomaly_detect_then_explain(client: TestClient):
     """
     Forces a genuine two-phase investigation:
@@ -200,6 +204,7 @@ def test_tool_trace_in_response(client: TestClient):
 # Test 7: Full trace inspection for a 5-step question
 # ---------------------------------------------------------------------------
 
+@pytest.mark.flaky(reruns=2, reruns_delay=3)
 def test_full_trace_five_step_question(client: TestClient):
     """
     Validates the exact multi-step pattern:

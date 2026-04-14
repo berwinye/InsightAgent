@@ -47,6 +47,8 @@ Strategy:
 - Always call observe_schema first to understand available tables.
 - Write clean, focused Python code that uses read_sql() and prints the result.
 - If run_python_analysis returns an error, read it carefully, fix the code, and retry.
+- If a query returns an empty result, that IS your finding — state it clearly and call final_answer.
+- Do not keep re-querying after getting empty results; summarise what was found and conclude.
 - When the analysis is complete and you have a clear answer, call final_answer.
 - You MUST call final_answer within {max_iter} iterations.
 - Do not invent data; derive all figures from query results.
@@ -167,11 +169,20 @@ def analyze_question(question: str, db: Optional[Session] = None) -> dict[str, A
     for iteration in range(1, MAX_ITERATIONS + 1):
         logger.info("Agent iteration %d/%d", iteration, MAX_ITERATIONS)
 
+        force_final = iteration >= MAX_ITERATIONS - 1
+        tool_choice: Any = (
+            {"type": "function", "function": {"name": "final_answer"}}
+            if force_final
+            else "auto"
+        )
+        if force_final:
+            logger.info("Forcing final_answer on iteration %d", iteration)
+
         response = client.chat.completions.create(
             model=settings.QWEN_MODEL,
             messages=messages,
             tools=TOOLS,
-            tool_choice="auto",
+            tool_choice=tool_choice,
         )
 
         message = response.choices[0].message
