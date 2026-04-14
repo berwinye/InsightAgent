@@ -1030,12 +1030,15 @@ curl -X POST http://localhost:8000/skills/run_python_analysis \
 {
   "status": "success",
   "stdout": "productLine,revenue\nClassic Cars,3853438.9400000002\nVintage Cars,1903150.84\n...",
+  "data_found": true,
   "summary": {
     "lines": 7,
     "chars": 210
   }
 }
 ```
+
+> `data_found` is `true` when `stdout` is non-empty, `false` when the query returned no rows.
 
 **Response `403` — Security Violation:**
 
@@ -1046,6 +1049,30 @@ curl -X POST http://localhost:8000/skills/run_python_analysis \
     "error_type": "SECURITY_VIOLATION",
     "message": "Import of module 'os' is not allowed.",
     "hint": "Use only pandas, numpy, math, statistics, datetime, re."
+  }
+}
+```
+
+**Response `403` — SQL Blocked:**
+
+```json
+{
+  "detail": {
+    "status": "failed",
+    "error_type": "SQL_BLOCKED",
+    "message": "Only SELECT / WITH statements are allowed."
+  }
+}
+```
+
+**Response `422` — Syntax Error:**
+
+```json
+{
+  "detail": {
+    "status": "blocked",
+    "error_type": "SYNTAX_ERROR",
+    "message": "SyntaxError: invalid syntax (line 3)"
   }
 }
 ```
@@ -1071,6 +1098,18 @@ curl -X POST http://localhost:8000/skills/run_python_analysis \
     "error_type": "EXECUTION_TIMEOUT",
     "message": "Execution exceeded 30 seconds.",
     "hint": "Simplify the query or reduce the dataset size."
+  }
+}
+```
+
+**Response `500` — Worker Error:**
+
+```json
+{
+  "detail": {
+    "status": "failed",
+    "error_type": "WORKER_ERROR",
+    "message": "Internal subprocess error."
   }
 }
 ```
