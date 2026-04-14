@@ -58,37 +58,50 @@ This separation means the agent logic can be tested independently of HTTP routin
 
 The analytics endpoints (`store-sales-summary`, `product-ranking`, etc.) were included as **pre-built views** alongside the open-ended agent endpoint to demonstrate that the system can answer *known* business questions with low latency, while the agent handles *unknown* questions. This two-tier design mirrors production analytics platforms and provides a useful fallback when the LLM service is unavailable.
 
-The system consists of two Docker containers communicating over an internal network. The FastAPI container connects to MySQL through **two separate database accounts** — a deliberate security design choice explained in Section 5.
+The system consists of two Docker containers and one external service, connected as shown below.
 
 ```mermaid
 graph TB
-    Client["Client (curl / Swagger UI)"]
-    subgraph Docker["Docker Compose Network"]
-        API["FastAPI Container\n(insightagent_api :8000)"]
-        DB["MySQL 8 Container\n(insightagent_mysql :3306)"]
+    Client["🖥️ Client\n(curl / Swagger UI / Tests)"]
+
+    subgraph Cloud["☁️ External"]
+        Qwen["Qwen LLM API\n(Alibaba Bailian)"]
     end
-    Client -->|"HTTP + X-API-Key"| API
-    API -->|"app_rw\n(SELECT/INSERT/UPDATE/DELETE)"| DB
-    API -->|"app_ro\n(SELECT only)"| DB
-```
 
-**Request routing within FastAPI:**
+    subgraph Docker["🐳 Docker Compose Network"]
 
-```mermaid
-graph LR
-    Request["Incoming Request"]
-    Auth["X-API-Key\nVerification"]
-    Router["FastAPI Router"]
-    CRUD["CRUD Routes\n(employees, products,\nsaved_queries)"]
-    Analytics["Analytics Routes\n(pre-built queries +\nagent endpoint)"]
-    Skills["Skills Routes\n(observe_schema,\nrun_python_analysis)"]
+        subgraph API["FastAPI Container  :8000"]
+            Auth["X-API-Key Auth"]
+            Routes["Routers\nemployees · products\nsaved_queries · analytics · skills"]
+            AgentSvc["Agent Service\n(self-loop, max 8 iters)"]
+            AnalyticsSvc["Analytics Service\n(pre-built SQL queries)"]
+            subgraph Sandbox["Sandboxed Code Execution"]
+                ASTGuard["AST Guard"]
+                SQLGuard["SQL Guard"]
+                Worker["Subprocess Worker\n(30s timeout, app_ro)"]
+            end
+        end
 
-    Request --> Auth
-    Auth -->|"401 if invalid"| Error["Error Response"]
-    Auth -->|"pass"| Router
-    Router --> CRUD
-    Router --> Analytics
-    Router --> Skills
+        subgraph DB["MySQL 8 Container  :3306"]
+            RW["app_rw\nSELECT/INSERT/UPDATE/DELETE"]
+            RO["app_ro\nSELECT only"]
+            Tables["Tables\nemployees · products · orders\ncustomers · payments\nsaved_queries · analysis_logs"]
+        end
+    end
+
+    Client -->|"HTTP + X-API-Key"| Auth
+    Auth --> Routes
+    Routes --> AgentSvc
+    Routes --> AnalyticsSvc
+    Routes --> Sandbox
+    AgentSvc -->|"tool calls"| Sandbox
+    AgentSvc <-->|"LLM API calls\n(HTTPS)"| Qwen
+    AnalyticsSvc -->|"read queries"| RO
+    Sandbox --> ASTGuard --> SQLGuard --> Worker
+    Worker -->|"SELECT via app_ro"| RO
+    Routes -->|"CRUD"| RW
+    RW --- Tables
+    RO --- Tables
 ```
 
 ---
