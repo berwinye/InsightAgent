@@ -60,6 +60,125 @@ This means even if LLM-generated code somehow bypassed the Python-level guards, 
 
 ---
 
+## Database Schema
+
+```mermaid
+erDiagram
+
+    offices {
+        varchar officeCode PK
+        varchar city
+        varchar phone
+        varchar addressLine1
+        varchar state
+        varchar country
+        varchar territory
+    }
+
+    employees {
+        int     employeeNumber PK
+        varchar lastName
+        varchar firstName
+        varchar email
+        varchar officeCode  FK
+        int     reportsTo   FK
+        varchar jobTitle
+    }
+
+    customers {
+        int     customerNumber          PK
+        varchar customerName
+        varchar phone
+        varchar city
+        varchar country
+        int     salesRepEmployeeNumber  FK
+        decimal creditLimit
+    }
+
+    orders {
+        int     orderNumber    PK
+        date    orderDate
+        date    requiredDate
+        date    shippedDate
+        varchar status
+        int     customerNumber FK
+    }
+
+    orderdetails {
+        int     orderNumber  PK,FK
+        varchar productCode  PK,FK
+        int     quantityOrdered
+        decimal priceEach
+        int     orderLineNumber
+    }
+
+    productlines {
+        varchar productLine     PK
+        varchar textDescription
+    }
+
+    products {
+        varchar  productCode     PK
+        varchar  productName
+        varchar  productLine     FK
+        varchar  productScale
+        varchar  productVendor
+        smallint quantityInStock
+        decimal  buyPrice
+        decimal  MSRP
+    }
+
+    payments {
+        int     customerNumber PK,FK
+        varchar checkNumber    PK
+        date    paymentDate
+        decimal amount
+    }
+
+    saved_queries {
+        int      id                     PK
+        varchar  title
+        text     natural_language_query
+        text     generated_code
+        text     result_summary
+        datetime created_at
+        datetime updated_at
+    }
+
+    analysis_logs {
+        int      id           PK
+        text     query_text
+        varchar  status
+        int      iterations
+        text     final_answer
+        datetime created_at
+    }
+
+    agent_turns {
+        int      id         PK
+        int      log_id     FK
+        int      iteration
+        varchar  tool_name
+        text     tool_input
+        text     tool_output
+        datetime created_at
+    }
+
+    offices      ||--o{ employees    : "employs"
+    employees    ||--o{ employees    : "reportsTo"
+    employees    ||--o{ customers    : "salesRep"
+    customers    ||--o{ orders       : "places"
+    customers    ||--o{ payments     : "makes"
+    orders       ||--|{ orderdetails : "contains"
+    products     ||--|{ orderdetails : "included in"
+    productlines ||--o{ products     : "categorises"
+    analysis_logs ||--|{ agent_turns : "has turns"
+```
+
+The top 8 tables are the Classic Models business dataset. `saved_queries`, `analysis_logs`, and `agent_turns` are custom tables added by InsightAgent for persistence and auditability.
+
+---
+
 ## Documentation
 
 | Document | Format | Location |
