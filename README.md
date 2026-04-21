@@ -60,14 +60,15 @@ This means even if LLM-generated code somehow bypassed the Python-level guards, 
 
 ---
 
-## API Documentation
+## Documentation
 
-| Format | Location |
-|--------|----------|
-| **Full API Reference (PDF)** | [`docs/API.pdf`](docs/API.pdf) |
-| **Full API Reference (Markdown)** | [`docs/API.md`](docs/API.md) |
-| **Interactive Swagger UI** | `http://localhost:8000/docs` (requires running stack) |
-| **OpenAPI JSON** | `http://localhost:8000/openapi.json` |
+| Document | Format | Location |
+|----------|--------|----------|
+| **API Reference** | PDF | [`docs/API.pdf`](docs/API.pdf) |
+| **Technical Report** | PDF | [`docs/Technical_Report.pdf`](docs/Technical_Report.pdf) |
+| **Presentation Slides** | PPTX | [`docs/InsightAgent_presentation.pptx`](docs/InsightAgent_presentation.pptx) |
+| **Interactive Swagger UI** | Web | `http://localhost:8000/docs` (requires running stack) |
+| **OpenAPI JSON** | JSON | `http://localhost:8000/openapi.json` |
 
 `docs/API.pdf` covers every endpoint, all parameters, example requests/responses, authentication flow, and error codes.
 
@@ -143,7 +144,7 @@ curl http://localhost:8000/docs   # Open Swagger UI in browser
 
 ## API Reference (Summary)
 
-Full details including parameters, error codes, and response schemas are in [`docs/API.pdf`](docs/API.pdf).
+Full details including parameters, error codes, and response schemas are in [`docs/API.pdf`](docs/API.pdf). The system design and security architecture are documented in [`docs/Technical_Report.pdf`](docs/Technical_Report.pdf).
 
 ### Employees & Products (read-only)
 
@@ -337,8 +338,10 @@ InsightAgent/
 ├── README.md
 ├── classicmodels.sql              ← source data
 ├── docs/
-│   ├── API.md                     ← full API reference (Markdown)
-│   └── API.pdf                    ← full API reference (PDF)
+│   ├── API.pdf                    ← full API reference
+│   ├── Technical_Report.pdf       ← system design & technical report
+│   ├── InsightAgent_presentation.pptx  ← presentation slides
+│   └── image/                     ← architecture & flow diagrams
 ├── docker/mysql/init/
 │   ├── 01_setup.sh                ← creates DB users, custom tables
 │   └── 02_import.sh               ← imports classicmodels data
