@@ -28,7 +28,7 @@ InsightAgent is a production-ready web API built on **FastAPI + MySQL 8 + Docker
 | ORM | SQLAlchemy 2.0 | Declarative models, connection pool management, dual-session support |
 | LLM Agent | Qwen via Alibaba Bailian | OpenAI-compatible API — no SDK lock-in; swap model/provider by changing one env var |
 | Containerisation | Docker + Docker Compose | Single-command reproducible stack; MySQL auto-initialises on first boot |
-| Data | Classic Models (Kaggle) | Rich relational sales dataset with employees, products, orders, payments |
+| Data | [Classic Models](https://www.mysqltutorial.org/mysql-sample-database.aspx) | Publicly available sample database from MySQL Tutorial — employees, products, orders, payments across 8 related tables |
 
 ---
 
@@ -521,3 +521,9 @@ This project was developed with the assistance of three GenAI tools, each servin
 All AI-generated output was critically reviewed, tested against real data, and refined. Core architectural decisions were independently justified; the AI accelerated execution rather than replacing engineering judgement.
 
 Exported conversation logs from ChatGPT and Windsurf are attached as supplementary material per module requirements.
+
+---
+
+## References
+
+MySQL Tutorial. n.d. *MySQL Sample Database*. [Online]. Available from: https://www.mysqltutorial.org/mysql-sample-database.aspx [Accessed 20 April 2026].
